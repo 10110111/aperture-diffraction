@@ -19,11 +19,10 @@ static QSurfaceFormat makeFormat()
     return format;
 }
 
-Canvas::Canvas(QWidget* parent)
-    : QOpenGLWidget(parent)
+Canvas::Canvas(UpdateBehavior updateBehavior, QWindow* parent)
+    : QOpenGLWindow(updateBehavior,parent)
 {
     setFormat(makeFormat());
-    setFocusPolicy(Qt::StrongFocus);
 }
 
 void Canvas::setupBuffers()
@@ -61,7 +60,7 @@ void main()
 }
 )";
         if(!glareProgram_.addShaderFromSourceCode(QOpenGLShader::Vertex, vertSrc))
-           QMessageBox::critical(this, tr("Shader compile failure"),
+           QMessageBox::critical(nullptr, tr("Shader compile failure"),
                                  tr("Failed to compile %1:\n%2").arg("glare vertex shader").arg(glareProgram_.log()));
         const char*const fragSrc = 1+R"(
 #version 330
@@ -107,10 +106,10 @@ void main()
 }
 )";
         if(!glareProgram_.addShaderFromSourceCode(QOpenGLShader::Fragment, fragSrc))
-           QMessageBox::critical(this, tr("Error compiling shader"),
+           QMessageBox::critical(nullptr, tr("Error compiling shader"),
                                  tr("Failed to compile %1:\n%2").arg("glare fragment shader").arg(glareProgram_.log()));
         if(!glareProgram_.link())
-            throw QMessageBox::critical(this, tr("Error linking shader program"),
+            throw QMessageBox::critical(nullptr, tr("Error linking shader program"),
                                         tr("Failed to link %1:\n%2").arg("glare shader program").arg(glareProgram_.log()));
     }
     {
@@ -125,7 +124,7 @@ void main()
 }
 )";
         if(!luminanceToScreenRGB_.addShaderFromSourceCode(QOpenGLShader::Vertex, vertSrc))
-            QMessageBox::critical(this, tr("Error compiling shader"),
+            QMessageBox::critical(nullptr, tr("Error compiling shader"),
                                   tr("Failed to compile %1:\n%2").arg("luminance-to-sRGB vertex shader").arg(glareProgram_.log()));
 
         const char*const fragSrc = 1+R"(
@@ -158,10 +157,10 @@ void main()
 }
 )";
         if(!luminanceToScreenRGB_.addShaderFromSourceCode(QOpenGLShader::Fragment, fragSrc))
-            QMessageBox::critical(this, tr("Error compiling shader"),
+            QMessageBox::critical(nullptr, tr("Error compiling shader"),
                                   tr("Failed to compile %1:\n%2").arg("luminance-to-sRGB fragment shader").arg(luminanceToScreenRGB_.log()));
         if(!luminanceToScreenRGB_.link())
-            throw QMessageBox::critical(this, tr("Error linking shader program"),
+            throw QMessageBox::critical(nullptr, tr("Error linking shader program"),
                                         tr("Failed to link %1:\n%2").arg("luminance-to-sRGB shader program").arg(luminanceToScreenRGB_.log()));
     }
 }
@@ -211,7 +210,7 @@ void Canvas::initializeGL()
 {
     if(!initializeOpenGLFunctions())
     {
-        QMessageBox::critical(this, tr("Error initializing OpenGL"), tr("Failed to initialize OpenGL %1.%2 functions")
+        QMessageBox::critical(nullptr, tr("Error initializing OpenGL"), tr("Failed to initialize OpenGL %1.%2 functions")
                                     .arg(OPENGL_MAJOR_VERSION)
                                     .arg(OPENGL_MINOR_VERSION));
         return;

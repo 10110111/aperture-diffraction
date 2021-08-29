@@ -1,14 +1,14 @@
 #pragma once
 
-#include <QOpenGLWidget>
+#include <QOpenGLWindow>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLFunctions_3_3_Core>
 
-class Canvas : public QOpenGLWidget, public QOpenGLFunctions_3_3_Core
+class Canvas : public QOpenGLWindow, public QOpenGLFunctions_3_3_Core
 {
     Q_OBJECT
 public:
-    Canvas(QWidget* parent=nullptr);
+    Canvas(UpdateBehavior updateBehavior=NoPartialUpdate, QWindow* parent=nullptr);
     ~Canvas();
 
 protected:
