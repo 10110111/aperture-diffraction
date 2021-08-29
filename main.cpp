@@ -14,7 +14,9 @@ int main(int argc, char** argv)
     QMainWindow mainWin;
 
     Canvas canvas;
-    canvas.resize(app.primaryScreen()->size()/1.6);
+    const auto size = app.primaryScreen()->size()/1.4;
+    const auto side = std::min(size.width(), size.height());
+    canvas.resize(side, side);
     canvas.show();
 
     return app.exec();

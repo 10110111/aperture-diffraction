@@ -64,45 +64,70 @@ void main()
                                  tr("Failed to compile %1:\n%2").arg("glare vertex shader").arg(glareProgram_.log()));
         const char*const fragSrc = 1+R"(
 #version 330
-uniform sampler2D luminanceXYZW;
+uniform sampler2D radiance;
 uniform vec2 stepDir;
+uniform int stepNum, stepCount;
 out vec4 XYZW;
+const float PI=3.14159265;
+
+float sinc(const float x)
+{
+    return x==0 ? 1 : sin(x)/x;
+}
 
 float weight(const float x)
 {
-    const float a=0.955491103831962;
-    const float b=0.0111272240420095;
-    return abs(x)<0.5 ? a : b/(x*x);
+    const float a=1;
+    return sinc(a*x)*sqrt(a/PI);
+}
+
+vec4 sample(const vec2 pos)
+{
+    vec4 tex = texture(radiance, pos/textureSize(radiance, 0));
+    // Input image consists of intensities, intermediate results are field values
+    return stepNum==0 ? sqrt(tex) : tex;
 }
 
 void main()
 {
-    vec2 size = textureSize(luminanceXYZW, 0);
-    vec2 pos = gl_FragCoord.st-vec2(0.5);
-    if(stepDir.x*stepDir.y >= 0)
+    vec2 size = textureSize(radiance, 0);
+    XYZW=vec4(0);
+    const float SAMPLES_X=4, SAMPLES_Y=4;
+    for(float xSampleN=0.5; xSampleN<SAMPLES_X; ++xSampleN)
     {
-        vec2 dir = stepDir.x<0 || stepDir.y<0 ? -stepDir : stepDir;
-        float stepCountBottomLeft = 1+ceil(min(pos.x/dir.x, pos.y/dir.y));
-        float stepCountTopRight = 1+ceil(min((size.x-pos.x-1)/dir.x, (size.x-pos.y-1)/dir.y));
+        for(float ySampleN=0.5; ySampleN<SAMPLES_Y; ++ySampleN)
+        {
+            vec2 pos = gl_FragCoord.st+vec2(xSampleN/SAMPLES_X-0.5,ySampleN/SAMPLES_Y-0.5);
+            if(stepDir.x*stepDir.y >= 0)
+            {
+                vec2 dir = stepDir.x<0 || stepDir.y<0 ? -stepDir : stepDir;
+                float stepCountBottomLeft = 1+ceil(min(pos.x/dir.x, pos.y/dir.y));
+                float stepCountTopRight = 1+ceil(min((size.x-pos.x-1)/dir.x, (size.y-pos.y-1)/dir.y));
 
-        XYZW = weight(0) * texture(luminanceXYZW, gl_FragCoord.st/size);
-        for(float dist=1; dist<stepCountBottomLeft; ++dist)
-            XYZW += weight(dist) * texture(luminanceXYZW, (gl_FragCoord.st-dir*dist)/size);
-        for(float dist=1; dist<stepCountTopRight; ++dist)
-            XYZW += weight(dist) * texture(luminanceXYZW, (gl_FragCoord.st+dir*dist)/size);
-    }
-    else
-    {
-        vec2 dir = stepDir.x<0 ? -stepDir : stepDir;
-        float stepCountTopLeft = 1+ceil(min(pos.x/dir.x, (size.y-pos.y-1)/-dir.y));
-        float stepCountBottomRight = 1+ceil(min((size.x-pos.x-1)/dir.x, pos.y/-dir.y));
+                XYZW += weight(0) * sample(pos);
+                for(float dist=1; dist<stepCountBottomLeft; ++dist)
+                    XYZW += weight(dist) * sample(pos-dir*dist);
+                for(float dist=1; dist<stepCountTopRight; ++dist)
+                    XYZW += weight(dist) * sample(pos+dir*dist);
+            }
+            else
+            {
+                vec2 dir = stepDir.x<0 ? -stepDir : stepDir;
+                float stepCountTopLeft = 1+ceil(min(pos.x/dir.x, (size.y-pos.y-1)/-dir.y));
+                float stepCountBottomRight = 1+ceil(min((size.x-pos.x-1)/dir.x, pos.y/-dir.y));
 
-        XYZW = weight(0) * texture(luminanceXYZW, gl_FragCoord.st/size);
-        for(float dist=1; dist<stepCountTopLeft; ++dist)
-            XYZW += weight(dist) * texture(luminanceXYZW, (gl_FragCoord.st-dir*dist)/size);
-        for(float dist=1; dist<stepCountBottomRight; ++dist)
-            XYZW += weight(dist) * texture(luminanceXYZW, (gl_FragCoord.st+dir*dist)/size);
+                XYZW += weight(0) * sample(pos);
+                for(float dist=1; dist<stepCountTopLeft; ++dist)
+                    XYZW += weight(dist) * sample(pos-dir*dist);
+                for(float dist=1; dist<stepCountBottomRight; ++dist)
+                    XYZW += weight(dist) * sample(pos+dir*dist);
+            }
+        }
     }
+    XYZW /= SAMPLES_X*SAMPLES_Y;
+
+    if(stepNum==stepCount-1)
+        XYZW *= XYZW;
 }
 )";
         if(!glareProgram_.addShaderFromSourceCode(QOpenGLShader::Fragment, fragSrc))
@@ -171,7 +196,7 @@ void Canvas::makeImageTexture()
     glBindTexture(GL_TEXTURE_2D, glareTextures_[1]);
     std::vector<glm::vec4> image(w*h);
     const int x=w/2, y=h/2;
-    image[w*y+x]=glm::vec4(1e6);
+    image[w*y+x]=glm::vec4(1e2);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, w, h, 0, GL_RGBA, GL_FLOAT, image.data());
 }
 
@@ -183,9 +208,9 @@ void Canvas::setupRenderTarget()
     {
         glBindTexture(GL_TEXTURE_2D, glareTextures_[n]);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width(), height(), 0, GL_RGBA, GL_FLOAT, nullptr);
-        // This is needed to avoid aliasing when sampling along skewed lines
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        // Our supersampling takes care of interpolation; doing it in the sampler would give bad results.
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         // We want our convolution filter to sample zeros outside the texture, so clamp to _border_
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
@@ -244,21 +269,19 @@ void Canvas::paintGL()
 
     constexpr double angleMin=5*degree;
     constexpr int numAngleSteps=3;
-    constexpr double angleStep=360*degree/numAngleSteps;
+    constexpr double angleStep=180*degree/numAngleSteps;
 
     makeImageTexture();
     glareProgram_.bind();
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, glareTextures_[1]);
-    glareProgram_.setUniformValue("luminanceXYZW", 0);
+    glareProgram_.setUniformValue("radiance", 0);
+    glareProgram_.setUniformValue("stepCount", numAngleSteps);
     for(int angleStepNum=0; angleStepNum<numAngleSteps; ++angleStepNum)
     {
-        // This is needed to avoid aliasing when sampling along skewed lines
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
         const auto angle = angleMin + angleStep*angleStepNum;
         glareProgram_.setUniformValue("stepDir", QVector2D(std::cos(angle),std::sin(angle)));
+        glareProgram_.setUniformValue("stepNum", angleStepNum);
         glBindFramebuffer(GL_FRAMEBUFFER, glareFBOs_[angleStepNum%2]);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
         // Now use the result of this stage to feed the next stage
