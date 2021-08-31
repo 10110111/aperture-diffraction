@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QVector4D>
 #include <QOpenGLWindow>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLFunctions_3_3_Core>
@@ -18,15 +19,20 @@ protected:
 private:
     void setupBuffers();
     void setupShaders();
+    void setupWavelengths();
     void makeImageTexture();
     void setupRenderTarget();
+    QMatrix4x4 radianceToLuminance(unsigned texIndex) const;
 
 private:
     GLuint vao_=0;
     GLuint vbo_=0;
-    GLuint mainFBO_;
+    GLuint luminanceFBO_=0;
+    GLuint luminanceTexture_=0;
     GLuint glareFBOs_[2] = {};
     GLuint glareTextures_[2] = {};
     QOpenGLShaderProgram glareProgram_;
-    QOpenGLShaderProgram luminanceToScreenRGB_;
+    QOpenGLShaderProgram radianceToLuminance_;
+    QOpenGLShaderProgram luminanceToScreen_;
+    std::vector<QVector4D> wavelengths_;
 };
