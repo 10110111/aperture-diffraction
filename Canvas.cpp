@@ -156,7 +156,6 @@ void calcAnalyticConvolution()
         }
     }
     XYZW /= SAMPLES_X*SAMPLES_Y;
-    XYZW *= 2.7;
 }
 
 void main()
