@@ -34,4 +34,5 @@ private:
     QOpenGLShaderProgram radianceToLuminance_;
     QOpenGLShaderProgram luminanceToScreen_;
     std::vector<QVector4D> wavelengths_;
+    bool needRedraw_=true;
 };

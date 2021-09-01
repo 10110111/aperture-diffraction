@@ -378,6 +378,7 @@ void Canvas::paintGL()
 
     if(width()!=lastWidth_ || height()!=lastHeight_)
     {
+        needRedraw_=true;
         // NOTE: we don't use QOpenGLWindow::resizeGL(), because it's sometimes called _after_
         // QOpenGLWindow::paintGL() instead of before. This breaks rendering until subsequent
         // repaint, which doesn't happen if nothing triggers it.
@@ -386,55 +387,59 @@ void Canvas::paintGL()
         setupRenderTarget();
     }
 
-    GLint targetFBO=-1;
-    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &targetFBO);
-
     glViewport(0, 0, width(), height());
     glBindVertexArray(vao_);
 
-    constexpr double angleMin=5*degree;
-    constexpr int numAngleSteps=3;
-    constexpr double angleStep=180*degree/numAngleSteps;
-
-    for(unsigned wlSetIndex=0; wlSetIndex<wavelengths_.size(); ++wlSetIndex)
+    if(needRedraw_)
     {
-        glareProgram_.bind();
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, glareTextures_[1]);
-        glareProgram_.setUniformValue("angleMin", float(angleMin));
-        glareProgram_.setUniformValue("radiance", 0);
-        glareProgram_.setUniformValue("stepCount", numAngleSteps);
-        glareProgram_.setUniformValue("wavelengths", wavelengths_[wlSetIndex]);
-        const int firstAngleStepNum=1; // First two passes are calculated analytically in stepNum==1
-        for(int angleStepNum=firstAngleStepNum; angleStepNum<numAngleSteps; ++angleStepNum)
-        {
-            const auto angle = angleMin + angleStep*angleStepNum;
-            glareProgram_.setUniformValue("angle", float(angle));
-            glareProgram_.setUniformValue("stepDir", QVector2D(std::cos(angle),std::sin(angle)));
-            glareProgram_.setUniformValue("stepNum", angleStepNum);
-            glBindFramebuffer(GL_FRAMEBUFFER, glareFBOs_[angleStepNum%2]);
-            glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-            // Now use the result of this stage to feed the next stage
-            glBindTexture(GL_TEXTURE_2D, glareTextures_[angleStepNum%2]);
-        }
-        glBindFramebuffer(GL_FRAMEBUFFER, luminanceFBO_);
-        radianceToLuminance_.bind();
-        radianceToLuminance_.setUniformValue("radiance", 0);
-        radianceToLuminance_.setUniformValue("radianceToLuminance", radianceToLuminance(wlSetIndex));
-        glBlendFunc(GL_ONE, GL_ONE);
-        if(wlSetIndex==0)
-            glDisable(GL_BLEND);
-        else
-            glEnable(GL_BLEND);
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-        glDisable(GL_BLEND);
-        // This sync is required to avoid sudden appearance of black frames starting with
-        // some iteration on NVIDIA GTX 750 Ti with Linux binary driver 390.116. Seems like
-        // command buffer overflowing, so here we force its execution.
-        glFinish();
-    }
+        GLint targetFBO=-1;
+        glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &targetFBO);
 
-    glBindFramebuffer(GL_FRAMEBUFFER,targetFBO);
+        constexpr double angleMin=5*degree;
+        constexpr int numAngleSteps=3;
+        constexpr double angleStep=180*degree/numAngleSteps;
+
+        for(unsigned wlSetIndex=0; wlSetIndex<wavelengths_.size(); ++wlSetIndex)
+        {
+            glareProgram_.bind();
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, glareTextures_[1]);
+            glareProgram_.setUniformValue("angleMin", float(angleMin));
+            glareProgram_.setUniformValue("radiance", 0);
+            glareProgram_.setUniformValue("stepCount", numAngleSteps);
+            glareProgram_.setUniformValue("wavelengths", wavelengths_[wlSetIndex]);
+            const int firstAngleStepNum=1; // First two passes are calculated analytically in stepNum==1
+            for(int angleStepNum=firstAngleStepNum; angleStepNum<numAngleSteps; ++angleStepNum)
+            {
+                const auto angle = angleMin + angleStep*angleStepNum;
+                glareProgram_.setUniformValue("angle", float(angle));
+                glareProgram_.setUniformValue("stepDir", QVector2D(std::cos(angle),std::sin(angle)));
+                glareProgram_.setUniformValue("stepNum", angleStepNum);
+                glBindFramebuffer(GL_FRAMEBUFFER, glareFBOs_[angleStepNum%2]);
+                glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+                // Now use the result of this stage to feed the next stage
+                glBindTexture(GL_TEXTURE_2D, glareTextures_[angleStepNum%2]);
+            }
+            glBindFramebuffer(GL_FRAMEBUFFER, luminanceFBO_);
+            radianceToLuminance_.bind();
+            radianceToLuminance_.setUniformValue("radiance", 0);
+            radianceToLuminance_.setUniformValue("radianceToLuminance", radianceToLuminance(wlSetIndex));
+            glBlendFunc(GL_ONE, GL_ONE);
+            if(wlSetIndex==0)
+                glDisable(GL_BLEND);
+            else
+                glEnable(GL_BLEND);
+            glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+            glDisable(GL_BLEND);
+            // This sync is required to avoid sudden appearance of black frames starting with
+            // some iteration on NVIDIA GTX 750 Ti with Linux binary driver 390.116. Seems like
+            // command buffer overflowing, so here we force its execution.
+            glFinish();
+        }
+
+        glBindFramebuffer(GL_FRAMEBUFFER,targetFBO);
+        needRedraw_=false;
+    }
     luminanceToScreen_.bind();
     const float exposure=1;
     luminanceToScreen_.setUniformValue("exposure", exposure);
