@@ -285,11 +285,6 @@ void Canvas::setupRenderTarget()
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void Canvas::resizeGL([[maybe_unused]] int w, [[maybe_unused]] int h)
-{
-    setupRenderTarget();
-}
-
 void Canvas::setupWavelengths()
 {
     constexpr double min=400; // nm
@@ -363,6 +358,16 @@ QMatrix4x4 Canvas::radianceToLuminance(const unsigned texIndex) const
 void Canvas::paintGL()
 {
     if(!isVisible()) return;
+
+    if(width()!=lastWidth_ || height()!=lastHeight_)
+    {
+        // NOTE: we don't use QOpenGLWindow::resizeGL(), because it's sometimes called _after_
+        // QOpenGLWindow::paintGL() instead of before. This breaks rendering until subsequent
+        // repaint, which doesn't happen if nothing triggers it.
+        lastWidth_=width();
+        lastHeight_=height();
+        setupRenderTarget();
+    }
 
     GLint targetFBO=-1;
     glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &targetFBO);

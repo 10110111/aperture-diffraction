@@ -13,7 +13,6 @@ public:
     ~Canvas();
 
 protected:
-    void resizeGL(int w, int h) override;
     void initializeGL() override;
     void paintGL() override;
 private:
@@ -31,6 +30,7 @@ private:
     GLuint luminanceTexture_=0;
     GLuint glareFBOs_[2] = {};
     GLuint glareTextures_[2] = {};
+    int lastWidth_=0, lastHeight_=0;
     QOpenGLShaderProgram glareProgram_;
     QOpenGLShaderProgram radianceToLuminance_;
     QOpenGLShaderProgram luminanceToScreen_;
