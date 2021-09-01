@@ -19,7 +19,6 @@ private:
     void setupBuffers();
     void setupShaders();
     void setupWavelengths();
-    void makeImageTexture();
     void setupRenderTarget();
     QMatrix4x4 radianceToLuminance(unsigned texIndex) const;
 

@@ -67,6 +67,7 @@ void main()
         const char*const fragSrc = 1+R"(
 #version 330
 uniform sampler2D radiance;
+uniform float angle, angleMin;
 uniform vec2 stepDir;
 uniform int stepNum, stepCount;
 uniform vec4 wavelengths;
@@ -100,11 +101,11 @@ vec4 sample(const vec2 pos)
     return stepNum==0 ? sqrt(tex) : tex;
 }
 
-void main()
+const float SAMPLES_X=4, SAMPLES_Y=4;
+void convolve()
 {
     vec2 size = textureSize(radiance, 0);
     XYZW=vec4(0);
-    const float SAMPLES_X=4, SAMPLES_Y=4;
     for(float xSampleN=0.5; xSampleN<SAMPLES_X; ++xSampleN)
     {
         for(float ySampleN=0.5; ySampleN<SAMPLES_Y; ++ySampleN)
@@ -137,6 +138,33 @@ void main()
         }
     }
     XYZW /= SAMPLES_X*SAMPLES_Y;
+}
+
+void calcAnalyticConvolution()
+{
+    vec2 size = textureSize(radiance, 0);
+    float alpha=angle-angleMin;
+    XYZW=vec4(0);
+    for(float xSampleN=0.5; xSampleN<SAMPLES_X; ++xSampleN)
+    {
+        for(float ySampleN=0.5; ySampleN<SAMPLES_Y; ++ySampleN)
+        {
+            vec2 pos0 = gl_FragCoord.st+vec2(xSampleN/SAMPLES_X-0.5,ySampleN/SAMPLES_Y-0.5) - size/2;
+            vec2 pos = pos0*mat2(vec2( cos(angleMin), sin(angleMin)),
+                                 vec2(-sin(angleMin), cos(angleMin)));
+            XYZW += weight(pos.x-pos.y/tan(alpha))*weight(pos.y/sin(alpha))/abs(sin(alpha));
+        }
+    }
+    XYZW /= SAMPLES_X*SAMPLES_Y;
+    XYZW *= 2.7;
+}
+
+void main()
+{
+    if(stepNum==1)
+        calcAnalyticConvolution();
+    else
+        convolve();
 
     if(stepNum==stepCount-1)
         XYZW *= XYZW;
@@ -235,16 +263,6 @@ void main()
             throw QMessageBox::critical(nullptr, tr("Error linking shader program"),
                                         tr("Failed to link %1:\n%2").arg("luminance-to-sRGB shader program").arg(luminanceToScreen_.log()));
     }
-}
-
-void Canvas::makeImageTexture()
-{
-    const int w=width(), h=height();
-    glBindTexture(GL_TEXTURE_2D, glareTextures_[1]);
-    std::vector<glm::vec4> image(w*h);
-    const int x=w/2, y=h/2;
-    image[w*y+x]=1e1f*glm::vec4(0.950455927051672, 1., 1.08905775075988, 0);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, w, h, 0, GL_RGBA, GL_FLOAT, image.data());
 }
 
 void Canvas::setupRenderTarget()
@@ -381,16 +399,18 @@ void Canvas::paintGL()
 
     for(unsigned wlSetIndex=0; wlSetIndex<wavelengths_.size(); ++wlSetIndex)
     {
-        makeImageTexture();
         glareProgram_.bind();
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, glareTextures_[1]);
+        glareProgram_.setUniformValue("angleMin", float(angleMin));
         glareProgram_.setUniformValue("radiance", 0);
         glareProgram_.setUniformValue("stepCount", numAngleSteps);
         glareProgram_.setUniformValue("wavelengths", wavelengths_[wlSetIndex]);
-        for(int angleStepNum=0; angleStepNum<numAngleSteps; ++angleStepNum)
+        const int firstAngleStepNum=1; // First two passes are calculated analytically in stepNum==1
+        for(int angleStepNum=firstAngleStepNum; angleStepNum<numAngleSteps; ++angleStepNum)
         {
             const auto angle = angleMin + angleStep*angleStepNum;
+            glareProgram_.setUniformValue("angle", float(angle));
             glareProgram_.setUniformValue("stepDir", QVector2D(std::cos(angle),std::sin(angle)));
             glareProgram_.setUniformValue("stepNum", angleStepNum);
             glBindFramebuffer(GL_FRAMEBUFFER, glareFBOs_[angleStepNum%2]);
