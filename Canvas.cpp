@@ -409,6 +409,10 @@ void Canvas::paintGL()
             glEnable(GL_BLEND);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
         glDisable(GL_BLEND);
+        // This sync is required to avoid sudden appearance of black frames starting with
+        // some iteration on NVIDIA GTX 750 Ti with Linux binary driver 390.116. Seems like
+        // command buffer overflowing, so here we force its execution.
+        glFinish();
     }
 
     glBindFramebuffer(GL_FRAMEBUFFER,targetFBO);
