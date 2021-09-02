@@ -307,7 +307,7 @@ void Canvas::setupWavelengths()
     constexpr double min=400; // nm
     constexpr double max=700; // nm
     constexpr auto range=max-min;
-    constexpr auto count=64;
+    constexpr auto count=256;
     static_assert(count%4==0);
     for(int i=0;i<count;i+=4)
     {
