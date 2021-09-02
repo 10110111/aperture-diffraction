@@ -101,43 +101,35 @@ vec4 sample(const vec2 pos)
     return stepNum==0 ? sqrt(tex) : tex;
 }
 
-const float SAMPLES_X=4, SAMPLES_Y=4;
 void convolve()
 {
     vec2 size = textureSize(radiance, 0);
     XYZW=vec4(0);
-    for(float xSampleN=0.5; xSampleN<SAMPLES_X; ++xSampleN)
+    vec2 pos = gl_FragCoord.st;
+    if(stepDir.x*stepDir.y >= 0)
     {
-        for(float ySampleN=0.5; ySampleN<SAMPLES_Y; ++ySampleN)
-        {
-            vec2 pos = gl_FragCoord.st+vec2(xSampleN/SAMPLES_X-0.5,ySampleN/SAMPLES_Y-0.5);
-            if(stepDir.x*stepDir.y >= 0)
-            {
-                vec2 dir = stepDir.x<0 || stepDir.y<0 ? -stepDir : stepDir;
-                float stepCountBottomLeft = 1+ceil(min(pos.x/dir.x, pos.y/dir.y));
-                float stepCountTopRight = 1+ceil(min((size.x-pos.x-1)/dir.x, (size.y-pos.y-1)/dir.y));
+        vec2 dir = stepDir.x<0 || stepDir.y<0 ? -stepDir : stepDir;
+        float stepCountBottomLeft = 1+ceil(min(pos.x/dir.x, pos.y/dir.y));
+        float stepCountTopRight = 1+ceil(min((size.x-pos.x-1)/dir.x, (size.y-pos.y-1)/dir.y));
 
-                XYZW += weight(0) * sample(pos);
-                for(float dist=1; dist<stepCountBottomLeft; ++dist)
-                    XYZW += weight(dist) * sample(pos-dir*dist);
-                for(float dist=1; dist<stepCountTopRight; ++dist)
-                    XYZW += weight(dist) * sample(pos+dir*dist);
-            }
-            else
-            {
-                vec2 dir = stepDir.x<0 ? -stepDir : stepDir;
-                float stepCountTopLeft = 1+ceil(min(pos.x/dir.x, (size.y-pos.y-1)/-dir.y));
-                float stepCountBottomRight = 1+ceil(min((size.x-pos.x-1)/dir.x, pos.y/-dir.y));
-
-                XYZW += weight(0) * sample(pos);
-                for(float dist=1; dist<stepCountTopLeft; ++dist)
-                    XYZW += weight(dist) * sample(pos-dir*dist);
-                for(float dist=1; dist<stepCountBottomRight; ++dist)
-                    XYZW += weight(dist) * sample(pos+dir*dist);
-            }
-        }
+        XYZW += weight(0) * sample(pos);
+        for(float dist=1; dist<stepCountBottomLeft; ++dist)
+            XYZW += weight(dist) * sample(pos-dir*dist);
+        for(float dist=1; dist<stepCountTopRight; ++dist)
+            XYZW += weight(dist) * sample(pos+dir*dist);
     }
-    XYZW /= SAMPLES_X*SAMPLES_Y;
+    else
+    {
+        vec2 dir = stepDir.x<0 ? -stepDir : stepDir;
+        float stepCountTopLeft = 1+ceil(min(pos.x/dir.x, (size.y-pos.y-1)/-dir.y));
+        float stepCountBottomRight = 1+ceil(min((size.x-pos.x-1)/dir.x, pos.y/-dir.y));
+
+        XYZW += weight(0) * sample(pos);
+        for(float dist=1; dist<stepCountTopLeft; ++dist)
+            XYZW += weight(dist) * sample(pos-dir*dist);
+        for(float dist=1; dist<stepCountBottomRight; ++dist)
+            XYZW += weight(dist) * sample(pos+dir*dist);
+    }
 }
 
 void calcAnalyticConvolution()
@@ -145,17 +137,10 @@ void calcAnalyticConvolution()
     vec2 size = textureSize(radiance, 0);
     float alpha=angle-angleMin;
     XYZW=vec4(0);
-    for(float xSampleN=0.5; xSampleN<SAMPLES_X; ++xSampleN)
-    {
-        for(float ySampleN=0.5; ySampleN<SAMPLES_Y; ++ySampleN)
-        {
-            vec2 pos0 = gl_FragCoord.st+vec2(xSampleN/SAMPLES_X-0.5,ySampleN/SAMPLES_Y-0.5) - size/2;
-            vec2 pos = pos0*mat2(vec2( cos(angleMin), sin(angleMin)),
-                                 vec2(-sin(angleMin), cos(angleMin)));
-            XYZW += weight(pos.x-pos.y/tan(alpha))*weight(pos.y/sin(alpha))/abs(sin(alpha));
-        }
-    }
-    XYZW /= SAMPLES_X*SAMPLES_Y;
+    vec2 pos0 = gl_FragCoord.st - size/2;
+    vec2 pos = pos0*mat2(vec2( cos(angleMin), sin(angleMin)),
+                         vec2(-sin(angleMin), cos(angleMin)));
+    XYZW += weight(pos.x-pos.y/tan(alpha))*weight(pos.y/sin(alpha))/abs(sin(alpha));
 }
 
 void main()
