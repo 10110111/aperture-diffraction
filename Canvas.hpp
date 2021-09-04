@@ -20,19 +20,16 @@ private:
     void setupShaders();
     void setupWavelengths();
     void setupRenderTarget();
-    QMatrix4x4 radianceToLuminance(unsigned texIndex) const;
+    QVector4D radianceToLuminance(unsigned texIndex) const;
 
 private:
     GLuint vao_=0;
     GLuint vbo_=0;
     GLuint luminanceFBO_=0;
     GLuint luminanceTexture_=0;
-    GLuint glareFBOs_[2] = {};
-    GLuint glareTextures_[2] = {};
     int lastWidth_=0, lastHeight_=0;
     QOpenGLShaderProgram glareProgram_;
-    QOpenGLShaderProgram radianceToLuminance_;
     QOpenGLShaderProgram luminanceToScreen_;
-    std::vector<QVector4D> wavelengths_;
+    std::vector<float> wavelengths_;
     bool needRedraw_=true;
 };

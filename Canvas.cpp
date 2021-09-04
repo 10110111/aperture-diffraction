@@ -19,7 +19,6 @@ static QSurfaceFormat makeFormat()
     format.setProfile(QSurfaceFormat::CoreProfile);
     return format;
 }
-static QMatrix4x4 toQMatrix(glm::mat4 const& m) { return QMatrix4x4(&transpose(m)[0][0]); }
 
 Canvas::Canvas(UpdateBehavior updateBehavior, QWindow* parent)
     : QOpenGLWindow(updateBehavior,parent)
@@ -66,92 +65,63 @@ void main()
                                  tr("Failed to compile %1:\n%2").arg("glare vertex shader").arg(glareProgram_.log()));
         const char*const fragSrc = 1+R"(
 #version 330
-uniform sampler2D radiance;
-uniform float angle, angleMin;
-uniform vec2 stepDir;
-uniform int stepNum, stepCount;
-uniform vec4 wavelengths;
+uniform float wavelength;
+uniform vec4 radianceToLuminance;
+uniform vec2 imageSize;
 out vec4 XYZW;
 const float PI=3.14159265;
 
-vec4 sinc(const vec4 v)
+float triangleArea(vec2 p1, vec2 p2, vec2 p3)
 {
-    return vec4(v.x==0 ? 1 : sin(v.x)/v.x,
-                v.y==0 ? 1 : sin(v.y)/v.y,
-                v.z==0 ? 1 : sin(v.z)/v.z,
-                v.w==0 ? 1 : sin(v.w)/v.w);
+    return p1.y*p2.x + p2.y*p3.x + p1.x*p3.y - p1.x*p2.y - p1.y*p3.x - p2.x*p3.y;
 }
 
-float sinc(const float x)
+// Ref: Equation (3) in
+//      R.M. Sillitto, W. Sillitto, "A Simple Fourier Approach to Fraunhofer Diffraction by Triangular Apertures"
+//      http://dx.doi.org/10.1080/713819012
+#define TRIANGLE(FUNC)                                         \
+    vec2 a=s3-s2;                                              \
+    vec2 b=s1-s3;                                              \
+    vec2 c=s2-s1;                                              \
+    /* FIXME: avoid division by zero or close to it */         \
+    return 2*( FUNC(-dot(k,s1))/(dot(k,b)*dot(k,c)) +          \
+               FUNC(-dot(k,s2))/(dot(k,c)*dot(k,a)) +          \
+               FUNC(-dot(k,s3))/(dot(k,a)*dot(k,b)) )
+
+float cosMinus1(float x) { return cos(x)-1; }
+
+float triangleRe(vec2 s1, vec2 s2, vec2 s3, vec2 k)
 {
-    return x==0 ? 1 : sin(x)/x;
+    TRIANGLE(cosMinus1);
 }
 
-vec4 weight(const float x)
+float triangleIm(vec2 s1, vec2 s2, vec2 s3, vec2 k)
 {
-    const float coef=100; // FIXME: give it a sensible name and a sensible value
-    vec4 a=coef/wavelengths;
-    return sinc(a*x)*sqrt(a/PI);
-}
-
-vec4 sample(const vec2 pos)
-{
-    vec4 tex = texture(radiance, pos/textureSize(radiance, 0));
-    // Input image consists of intensities, intermediate results are field values
-    return stepNum==0 ? sqrt(tex) : tex;
-}
-
-void convolve()
-{
-    vec2 size = textureSize(radiance, 0);
-    XYZW=vec4(0);
-    vec2 pos = gl_FragCoord.st;
-    if(stepDir.x*stepDir.y >= 0)
-    {
-        vec2 dir = stepDir.x<0 || stepDir.y<0 ? -stepDir : stepDir;
-        float stepCountBottomLeft = 1+ceil(min(pos.x/dir.x, pos.y/dir.y));
-        float stepCountTopRight = 1+ceil(min((size.x-pos.x-1)/dir.x, (size.y-pos.y-1)/dir.y));
-
-        XYZW += weight(0) * sample(pos);
-        for(float dist=1; dist<stepCountBottomLeft; ++dist)
-            XYZW += weight(dist) * sample(pos-dir*dist);
-        for(float dist=1; dist<stepCountTopRight; ++dist)
-            XYZW += weight(dist) * sample(pos+dir*dist);
-    }
-    else
-    {
-        vec2 dir = stepDir.x<0 ? -stepDir : stepDir;
-        float stepCountTopLeft = 1+ceil(min(pos.x/dir.x, (size.y-pos.y-1)/-dir.y));
-        float stepCountBottomRight = 1+ceil(min((size.x-pos.x-1)/dir.x, pos.y/-dir.y));
-
-        XYZW += weight(0) * sample(pos);
-        for(float dist=1; dist<stepCountTopLeft; ++dist)
-            XYZW += weight(dist) * sample(pos-dir*dist);
-        for(float dist=1; dist<stepCountBottomRight; ++dist)
-            XYZW += weight(dist) * sample(pos+dir*dist);
-    }
-}
-
-void calcAnalyticConvolution()
-{
-    vec2 size = textureSize(radiance, 0);
-    float alpha=angle-angleMin;
-    XYZW=vec4(0);
-    vec2 pos0 = gl_FragCoord.st - size/2;
-    vec2 pos = pos0*mat2(vec2( cos(angleMin), sin(angleMin)),
-                         vec2(-sin(angleMin), cos(angleMin)));
-    XYZW += weight(pos.x-pos.y/tan(alpha))*weight(pos.y/sin(alpha))/abs(sin(alpha));
+    TRIANGLE(sin);
 }
 
 void main()
 {
-    if(stepNum==1)
-        calcAnalyticConvolution();
-    else
-        convolve();
-
-    if(stepNum==stepCount-1)
-        XYZW *= XYZW;
+    const vec2 points[]=vec2[](vec2(1., 0.),
+                               vec2(0.5, 0.866025403784439),
+                               vec2(-0.5, 0.866025403784439),
+                               vec2(-1., 0.),
+                               vec2(-0.5, -0.866025403784439),
+                               vec2(0.5, -0.866025403784439));
+    const int pointCount = points.length();
+    float XYZW_re=0, XYZW_im=0;
+    for(int pointNum=2; pointNum<pointCount; ++pointNum)
+    {
+        const float coef=200; // FIXME: give it a meaningful name and value
+        vec2 k = (gl_FragCoord.st - imageSize/2)*coef/wavelength;
+        vec2 p1=points[0],
+             p2=points[pointNum-1],
+             p3=points[pointNum];
+        float area = triangleArea(p1,p2,p3);
+        XYZW_re += area*triangleRe(p1,p2,p3,k);
+        XYZW_im += area*triangleIm(p1,p2,p3,k);
+    }
+    XYZW = radianceToLuminance*(XYZW_re*XYZW_re+XYZW_im*XYZW_im);
 }
 )";
         if(!glareProgram_.addShaderFromSourceCode(QOpenGLShader::Fragment, fragSrc))
@@ -160,41 +130,6 @@ void main()
         if(!glareProgram_.link())
             throw QMessageBox::critical(nullptr, tr("Error linking shader program"),
                                         tr("Failed to link %1:\n%2").arg("glare shader program").arg(glareProgram_.log()));
-    }
-    {
-        const char*const vertSrc = 1+R"(
-#version 330
-in vec3 vertex;
-out vec2 texCoord;
-void main()
-{
-    texCoord=(vertex.xy+vec2(1))/2;
-    gl_Position=vec4(vertex,1);
-}
-)";
-        if(!radianceToLuminance_.addShaderFromSourceCode(QOpenGLShader::Vertex, vertSrc))
-            QMessageBox::critical(nullptr, tr("Error compiling shader"),
-                                  tr("Failed to compile %1:\n%2").arg("radiance-to-luminance vertex shader").arg(glareProgram_.log()));
-
-        const char*const fragSrc = 1+R"(
-#version 330
-
-uniform mat4 radianceToLuminance;
-uniform sampler2D radiance;
-in vec2 texCoord;
-out vec4 luminance;
-
-void main()
-{
-    luminance=radianceToLuminance*texture(radiance, texCoord);
-}
-)";
-        if(!radianceToLuminance_.addShaderFromSourceCode(QOpenGLShader::Fragment, fragSrc))
-            QMessageBox::critical(nullptr, tr("Error compiling shader"),
-                                  tr("Failed to compile %1:\n%2").arg("radiance-to-luminance fragment shader").arg(radianceToLuminance_.log()));
-        if(!radianceToLuminance_.link())
-            throw QMessageBox::critical(nullptr, tr("Error linking shader program"),
-                                        tr("Failed to link %1:\n%2").arg("radiance-to-luminance shader program").arg(radianceToLuminance_.log()));
     }
     {
         const char*const vertSrc = 1+R"(
@@ -251,28 +186,6 @@ void main()
 
 void Canvas::setupRenderTarget()
 {
-    if(!glareTextures_[0])
-        glGenTextures(std::size(glareTextures_), glareTextures_);
-    for(unsigned n=0; n<std::size(glareTextures_); ++n)
-    {
-        glBindTexture(GL_TEXTURE_2D, glareTextures_[n]);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width(), height(), 0, GL_RGBA, GL_FLOAT, nullptr);
-        // Our supersampling takes care of interpolation; doing it in the sampler would give bad results.
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        // We want our convolution filter to sample zeros outside the texture, so clamp to _border_
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-    }
-
-    if(!glareFBOs_[0])
-        glGenFramebuffers(std::size(glareFBOs_), glareFBOs_);
-    for(unsigned n=0; n<std::size(glareFBOs_); ++n)
-    {
-        glBindFramebuffer(GL_FRAMEBUFFER, glareFBOs_[n]);
-        glFramebufferTexture(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,glareTextures_[n],0);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    }
     if(!luminanceTexture_)
         glGenTextures(1, &luminanceTexture_);
     glBindTexture(GL_TEXTURE_2D, luminanceTexture_);
@@ -285,6 +198,7 @@ void Canvas::setupRenderTarget()
     glBindFramebuffer(GL_FRAMEBUFFER, luminanceFBO_);
     glFramebufferTexture(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,luminanceTexture_,0);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void Canvas::setupWavelengths()
@@ -293,14 +207,8 @@ void Canvas::setupWavelengths()
     constexpr double max=700; // nm
     constexpr auto range=max-min;
     constexpr auto count=256;
-    static_assert(count%4==0);
-    for(int i=0;i<count;i+=4)
-    {
-        wavelengths_.push_back(QVector4D(min+range*double(i+0)/(count-1),
-                                         min+range*double(i+1)/(count-1),
-                                         min+range*double(i+2)/(count-1),
-                                         min+range*double(i+3)/(count-1)));
-    }
+    for(int i=0;i<count;++i)
+        wavelengths_.push_back(min+range*i/(count-1));
 }
 
 void Canvas::initializeGL()
@@ -328,33 +236,26 @@ Canvas::~Canvas()
         glDeleteFramebuffers(1, &luminanceFBO_);
     if(luminanceTexture_)
         glDeleteTextures(1, &luminanceTexture_);
-    if(glareFBOs_[0])
-        glDeleteFramebuffers(std::size(glareFBOs_), glareFBOs_);
-    if(glareTextures_[0])
-        glDeleteTextures(std::size(glareTextures_), glareTextures_);
 }
 
-QMatrix4x4 Canvas::radianceToLuminance(const unsigned texIndex) const
+QVector4D Canvas::radianceToLuminance(const unsigned texIndex) const
 {
     using glm::mat4;
     const auto diag=[](GLfloat x, GLfloat y, GLfloat z, GLfloat w) { return mat4(x,0,0,0,
                                                                                  0,y,0,0,
                                                                                  0,0,z,0,
                                                                                  0,0,0,w); };
-    const auto wlCount = 4*wavelengths_.size();
+    const auto wlCount = wavelengths_.size();
     // Weights for the trapezoidal quadrature rule
     const auto weights = wlCount==4            ? diag(0.5,1,1,0.5) :
                          texIndex==0           ? diag(0.5,1,1,1  ) :
                          texIndex+1==wlCount/4 ? diag(  1,1,1,0.5) :
                                                  diag(  1,1,1,1);
-    const auto dlambda = weights * abs(wavelengths_.back()[3]-wavelengths_.front()[0]) / (wlCount-1.f);
+    const auto dlambda = weights * abs(wavelengths_.back()-wavelengths_.front()) / (wlCount-1.f);
     // Ref: Rapport BIPM-2019/05. Principles Governing Photometry, 2nd edition. Sections 6.2, 6.3.
     const auto maxLuminousEfficacy=diag(683.002f,683.002f,683.002f,1700.13f); // lm/W
-    const auto ret = maxLuminousEfficacy * mat4(wavelengthToXYZW(wavelengths_[texIndex][0]),
-                                                wavelengthToXYZW(wavelengths_[texIndex][1]),
-                                                wavelengthToXYZW(wavelengths_[texIndex][2]),
-                                                wavelengthToXYZW(wavelengths_[texIndex][3])) * dlambda;
-    return toQMatrix(ret);
+    const auto ret = maxLuminousEfficacy * wavelengthToXYZW(wavelengths_[texIndex]) * dlambda;
+    return QVector4D(ret.x, ret.y, ret.z, ret.w);
 }
 
 void Canvas::paintGL()
@@ -380,37 +281,16 @@ void Canvas::paintGL()
         GLint targetFBO=-1;
         glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &targetFBO);
 
-        constexpr double angleMin=5*degree;
-        constexpr int numAngleSteps=3;
-        constexpr double angleStep=180*degree/numAngleSteps;
-
-        for(unsigned wlSetIndex=0; wlSetIndex<wavelengths_.size(); ++wlSetIndex)
+        glBindFramebuffer(GL_FRAMEBUFFER,luminanceFBO_);
+        for(unsigned wlIndex=0; wlIndex<wavelengths_.size(); ++wlIndex)
         {
             glareProgram_.bind();
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, glareTextures_[1]);
-            glareProgram_.setUniformValue("angleMin", float(angleMin));
-            glareProgram_.setUniformValue("radiance", 0);
-            glareProgram_.setUniformValue("stepCount", numAngleSteps);
-            glareProgram_.setUniformValue("wavelengths", wavelengths_[wlSetIndex]);
-            const int firstAngleStepNum=1; // First two passes are calculated analytically in stepNum==1
-            for(int angleStepNum=firstAngleStepNum; angleStepNum<numAngleSteps; ++angleStepNum)
-            {
-                const auto angle = angleMin + angleStep*angleStepNum;
-                glareProgram_.setUniformValue("angle", float(angle));
-                glareProgram_.setUniformValue("stepDir", QVector2D(std::cos(angle),std::sin(angle)));
-                glareProgram_.setUniformValue("stepNum", angleStepNum);
-                glBindFramebuffer(GL_FRAMEBUFFER, glareFBOs_[angleStepNum%2]);
-                glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-                // Now use the result of this stage to feed the next stage
-                glBindTexture(GL_TEXTURE_2D, glareTextures_[angleStepNum%2]);
-            }
-            glBindFramebuffer(GL_FRAMEBUFFER, luminanceFBO_);
-            radianceToLuminance_.bind();
-            radianceToLuminance_.setUniformValue("radiance", 0);
-            radianceToLuminance_.setUniformValue("radianceToLuminance", radianceToLuminance(wlSetIndex));
+            glareProgram_.setUniformValue("wavelength", wavelengths_[wlIndex]);
+            glareProgram_.setUniformValue("imageSize", QVector2D(width(), height()));
+            glareProgram_.setUniformValue("radianceToLuminance", radianceToLuminance(wlIndex));
+
             glBlendFunc(GL_ONE, GL_ONE);
-            if(wlSetIndex==0)
+            if(wlIndex==0)
                 glDisable(GL_BLEND);
             else
                 glEnable(GL_BLEND);
@@ -426,11 +306,12 @@ void Canvas::paintGL()
         needRedraw_=false;
     }
     luminanceToScreen_.bind();
-    const float exposure=1;
+    const float exposure=0.01;
     luminanceToScreen_.setUniformValue("exposure", exposure);
     glBindTexture(GL_TEXTURE_2D, luminanceTexture_);
     luminanceToScreen_.setUniformValue("luminanceXYZW", 0);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindTexture(GL_TEXTURE_2D, 0);
 
     glBindVertexArray(0);
 }
