@@ -76,28 +76,48 @@ float triangleArea(vec2 p1, vec2 p2, vec2 p3)
     return p1.y*p2.x + p2.y*p3.x + p1.x*p3.y - p1.x*p2.y - p1.y*p3.x - p2.x*p3.y;
 }
 
-// Ref: Equation (3) in
+float sinc(float x) { return x==0 ? 1 : sin(x)/x; }
+float sqr(float x) { return x*x; }
+
+// Ref: Equations (4.1), (4.2), but altering the definition of sinc, in
 //      R.M. Sillitto, W. Sillitto, "A Simple Fourier Approach to Fraunhofer Diffraction by Triangular Apertures"
 //      http://dx.doi.org/10.1080/713819012
-#define TRIANGLE(FUNC)                                         \
-    vec2 a=s3-s2;                                              \
-    vec2 b=s1-s3;                                              \
-    vec2 c=s2-s1;                                              \
-    /* FIXME: avoid division by zero or close to it */         \
-    return 2*( FUNC(-dot(k,s1))/(dot(k,b)*dot(k,c)) +          \
-               FUNC(-dot(k,s2))/(dot(k,c)*dot(k,a)) +          \
-               FUNC(-dot(k,s3))/(dot(k,a)*dot(k,b)) )
-
-float cosMinus1(float x) { return cos(x)-1; }
-
-float triangleRe(vec2 s1, vec2 s2, vec2 s3, vec2 k)
+vec2 triangle(vec2 s1, vec2 s2, vec2 s3, vec2 k)
 {
-    TRIANGLE(cosMinus1);
-}
+    if(k==0) return vec2(1,0);
+    vec2 a1=s3-s2;
+    vec2 b1=s1-s3;
+    vec2 c1=s2-s1;
+    float alpha1=dot(a1,k)/2;
+    float beta1 =dot(b1,k)/2;
 
-float triangleIm(vec2 s1, vec2 s2, vec2 s3, vec2 k)
-{
-    TRIANGLE(sin);
+    vec2 a2=s1-s3;
+    vec2 b2=s2-s1;
+    vec2 c2=s3-s2;
+    float alpha2=dot(a2,k)/2;
+    float beta2 =dot(b2,k)/2;
+
+    float alpha, beta;
+    vec2 originShift;
+    // Try to avoid denominator close to zero
+    if(abs(alpha1+beta1) > abs(alpha2+beta2))
+    {
+        alpha=alpha1;
+        beta =beta1;
+        originShift=s3;
+    }
+    else
+    {
+        alpha=alpha2;
+        beta =beta2;
+        originShift=s1;
+    }
+    float reY=(alpha*sqr(sinc(alpha))+beta*sqr(sinc(beta)))/(alpha+beta);
+    float imY=(sinc(2*beta)-sinc(2*alpha))/(alpha+beta);
+    float reShiftExp =  cos(dot(k,originShift));
+    float imShiftExp = -sin(dot(k,originShift));
+    return vec2(reY*reShiftExp-imY*imShiftExp,
+                imY*reShiftExp+reY*imShiftExp);
 }
 
 void main()
@@ -118,8 +138,9 @@ void main()
              p2=points[pointNum-1],
              p3=points[pointNum];
         float area = triangleArea(p1,p2,p3);
-        XYZW_re += area*triangleRe(p1,p2,p3,k);
-        XYZW_im += area*triangleIm(p1,p2,p3,k);
+        vec2 tri = triangle(p1,p2,p3,k);
+        XYZW_re += area*tri.x;
+        XYZW_im += area*tri.y;
     }
     XYZW = radianceToLuminance*(XYZW_re*XYZW_re+XYZW_im*XYZW_im);
 }
