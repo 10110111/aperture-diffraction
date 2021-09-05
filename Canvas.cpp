@@ -67,6 +67,7 @@ void main()
                                  tr("Failed to compile %1:\n%2").arg("glare vertex shader").arg(glareProgram_.log()));
         const char*const fragSrc = 1+R"(
 #version 330
+uniform float scale;
 uniform float wavelength;
 uniform vec4 radianceToLuminance;
 uniform vec2 imageSize;
@@ -134,8 +135,7 @@ void main()
     float XYZW_re=0, XYZW_im=0;
     for(int pointNum=2; pointNum<pointCount; ++pointNum)
     {
-        const float coef=200; // FIXME: give it a meaningful name and value
-        vec2 k = (gl_FragCoord.st - imageSize/2)*coef/wavelength;
+        vec2 k = (gl_FragCoord.st - imageSize/2)*scale/wavelength;
         vec2 p1=points[0],
              p2=points[pointNum-1],
              p3=points[pointNum];
@@ -295,6 +295,11 @@ void Canvas::paintGL()
         lastHeight_=height();
         setupRenderTarget();
     }
+    if(prevScale_!=tools_->scale())
+    {
+        needRedraw_=true;
+        prevScale_=tools_->scale();
+    }
 
     glViewport(0, 0, width(), height());
     glBindVertexArray(vao_);
@@ -308,6 +313,7 @@ void Canvas::paintGL()
         for(unsigned wlIndex=0; wlIndex<wavelengths_.size(); ++wlIndex)
         {
             glareProgram_.bind();
+            glareProgram_.setUniformValue("scale", float(std::pow(10., -tools_->scale())));
             glareProgram_.setUniformValue("wavelength", wavelengths_[wlIndex]);
             glareProgram_.setUniformValue("imageSize", QVector2D(width(), height()));
             glareProgram_.setUniformValue("radianceToLuminance", radianceToLuminance(wlIndex));

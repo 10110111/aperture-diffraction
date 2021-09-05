@@ -22,6 +22,7 @@ ToolsWidget::ToolsWidget(QWidget* parent)
     setWidget(mainWidget);
 
     exposure_ = addManipulator(layout, this, tr(u8"log<sub>10</sub>e&xposure"), -8, 7, 0, 2);
+    scale_    = addManipulator(layout, this, tr(u8"log<sub>10</sub>&scale"), -5, 1, -2.5, 2);
 
     layout->addStretch();
 }

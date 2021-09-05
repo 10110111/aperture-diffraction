@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cmath>
 #include <QVector4D>
 #include <QOpenGLWindow>
 #include <QOpenGLShaderProgram>
@@ -25,6 +26,7 @@ private:
 
 private:
     ToolsWidget* tools_=nullptr;
+    double prevScale_=NAN;
     GLuint vao_=0;
     GLuint vbo_=0;
     GLuint luminanceFBO_=0;
