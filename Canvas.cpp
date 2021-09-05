@@ -67,6 +67,7 @@ void main()
                                  tr("Failed to compile %1:\n%2").arg("glare vertex shader").arg(glareProgram_.log()));
         const char*const fragSrc = 1+R"(
 #version 330
+uniform int pointCount;
 uniform float scale;
 uniform float wavelength;
 uniform vec4 radianceToLuminance;
@@ -125,20 +126,13 @@ vec2 triangle(vec2 s1, vec2 s2, vec2 s3, vec2 k)
 
 void main()
 {
-    const vec2 points[]=vec2[](vec2(1., 0.),
-                               vec2(0.5, 0.866025403784439),
-                               vec2(-0.5, 0.866025403784439),
-                               vec2(-1., 0.),
-                               vec2(-0.5, -0.866025403784439),
-                               vec2(0.5, -0.866025403784439));
-    const int pointCount = points.length();
     float XYZW_re=0, XYZW_im=0;
     for(int pointNum=2; pointNum<pointCount; ++pointNum)
     {
         vec2 k = (gl_FragCoord.st - imageSize/2)*scale/wavelength;
-        vec2 p1=points[0],
-             p2=points[pointNum-1],
-             p3=points[pointNum];
+        vec2 p1=vec2(1,0),
+             p2=vec2(cos(2*PI*(pointNum-1)/pointCount), sin(2*PI*(pointNum-1)/pointCount)),
+             p3=vec2(cos(2*PI* pointNum   /pointCount), sin(2*PI* pointNum   /pointCount));
         float area = triangleArea(p1,p2,p3);
         vec2 tri = triangle(p1,p2,p3,k);
         XYZW_re += area*tri.x;
@@ -295,6 +289,11 @@ void Canvas::paintGL()
         lastHeight_=height();
         setupRenderTarget();
     }
+    if(prevPointCount_!=tools_->pointCount())
+    {
+        needRedraw_=true;
+        prevPointCount_=tools_->pointCount();
+    }
     if(prevScale_!=tools_->scale())
     {
         needRedraw_=true;
@@ -314,6 +313,7 @@ void Canvas::paintGL()
         {
             glareProgram_.bind();
             glareProgram_.setUniformValue("scale", float(std::pow(10., -tools_->scale())));
+            glareProgram_.setUniformValue("pointCount", tools_->pointCount());
             glareProgram_.setUniformValue("wavelength", wavelengths_[wlIndex]);
             glareProgram_.setUniformValue("imageSize", QVector2D(width(), height()));
             glareProgram_.setUniformValue("radianceToLuminance", radianceToLuminance(wlIndex));

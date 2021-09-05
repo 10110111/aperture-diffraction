@@ -12,6 +12,7 @@ public:
 
     double exposure() const { return exposure_->value(); }
     double scale() const { return scale_->value(); }
+    int pointCount() const { return pointCount_->value(); }
 
 signals:
     void settingChanged();
@@ -19,4 +20,5 @@ signals:
 private:
     Manipulator* exposure_=nullptr;
     Manipulator* scale_=nullptr;
+    Manipulator* pointCount_=nullptr;
 };
