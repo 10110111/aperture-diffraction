@@ -23,8 +23,8 @@ ToolsWidget::ToolsWidget(QWidget* parent)
 
     exposure_ = addManipulator(layout, this, tr(u8"log<sub>10</sub>e&xposure"), -8, 7, 0, 2);
     scale_    = addManipulator(layout, this, tr(u8"log<sub>10</sub>&scale"), -5, 1, -2.5, 2);
-    pointCount_ = addManipulator(layout, this, tr(u8"&point count"), 3, 100, 6, 0);
-    sampleCount_ = addManipulator(layout, this, tr(u8"sa&mples per pixel side"), 1, 99, 1, 0);
+    pointCount_ = addManipulator(layout, this, tr(u8"Aperture ed&ge count"), 3, 100, 6, 0);
+    sampleCount_ = addManipulator(layout, this, tr(u8"Sa&mples per pixel side"), 1, 99, 1, 0);
 
     layout->addStretch();
 }
