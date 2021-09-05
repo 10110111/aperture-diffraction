@@ -19,8 +19,9 @@ int main(int argc, char** argv)
     const auto widget=QWidget::createWindowContainer(canvas);
     QObject::connect(tools, &ToolsWidget::settingChanged, canvas, qOverload<>(&Canvas::update));
     mainWin.setCentralWidget(widget);
-    mainWin.addDockWidget(Qt::RightDockWidgetArea, tools);
-    mainWin.resize(app.primaryScreen()->size()/1.4);
+    mainWin.addDockWidget(Qt::TopDockWidgetArea, tools);
+    const auto size = app.primaryScreen()->size().height()/1.4;
+    mainWin.resize(size,size);
     mainWin.show();
 
     return app.exec();
