@@ -27,7 +27,8 @@ private:
 private:
     ToolsWidget* tools_=nullptr;
     double prevScale_=NAN;
-    double prevPointCount_=NAN;
+    int prevPointCount_=-1;
+    int prevSampleCount_=-1;
     GLuint vao_=0;
     GLuint vbo_=0;
     GLuint luminanceFBO_=0;

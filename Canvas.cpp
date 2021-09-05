@@ -68,6 +68,7 @@ void main()
         const char*const fragSrc = 1+R"(
 #version 330
 uniform int pointCount;
+uniform int sampleCount;
 uniform float scale;
 uniform float wavelength;
 uniform vec4 radianceToLuminance;
@@ -124,21 +125,35 @@ vec2 triangle(vec2 s1, vec2 s2, vec2 s3, vec2 k)
                 imY*reShiftExp+reY*imShiftExp);
 }
 
+vec2 sampleShift(const float sampleNumX, const float sampleNumY)
+{
+    return vec2(sampleNumX+0.5, sampleNumY+0.5)/sampleCount-0.5;
+}
+
 void main()
 {
-    float XYZW_re=0, XYZW_im=0;
-    for(int pointNum=2; pointNum<pointCount; ++pointNum)
+    XYZW=vec4(0);
+    for(int sampleNumY=0; sampleNumY<sampleCount; ++sampleNumY)
     {
-        vec2 k = (gl_FragCoord.st - imageSize/2)*scale/wavelength;
-        vec2 p1=vec2(1,0),
-             p2=vec2(cos(2*PI*(pointNum-1)/pointCount), sin(2*PI*(pointNum-1)/pointCount)),
-             p3=vec2(cos(2*PI* pointNum   /pointCount), sin(2*PI* pointNum   /pointCount));
-        float area = triangleArea(p1,p2,p3);
-        vec2 tri = triangle(p1,p2,p3,k);
-        XYZW_re += area*tri.x;
-        XYZW_im += area*tri.y;
+        for(int sampleNumX=0; sampleNumX<sampleCount; ++sampleNumX)
+        {
+            vec2 shiftInPixel=sampleShift(sampleNumX,sampleNumY);
+            float XYZW_re=0, XYZW_im=0;
+            for(int pointNum=2; pointNum<pointCount; ++pointNum)
+            {
+                vec2 k = (gl_FragCoord.st - imageSize/2 + shiftInPixel)*scale/wavelength;
+                vec2 p1=vec2(1,0),
+                     p2=vec2(cos(2*PI*(pointNum-1)/pointCount), sin(2*PI*(pointNum-1)/pointCount)),
+                     p3=vec2(cos(2*PI* pointNum   /pointCount), sin(2*PI* pointNum   /pointCount));
+                float area = triangleArea(p1,p2,p3);
+                vec2 tri = triangle(p1,p2,p3,k);
+                XYZW_re += area*tri.x;
+                XYZW_im += area*tri.y;
+            }
+            XYZW += radianceToLuminance*(XYZW_re*XYZW_re+XYZW_im*XYZW_im);
+        }
     }
-    XYZW = radianceToLuminance*(XYZW_re*XYZW_re+XYZW_im*XYZW_im);
+    XYZW /= sqr(sampleCount);
 }
 )";
         if(!glareProgram_.addShaderFromSourceCode(QOpenGLShader::Fragment, fragSrc))
@@ -289,15 +304,12 @@ void Canvas::paintGL()
         lastHeight_=height();
         setupRenderTarget();
     }
-    if(prevPointCount_!=tools_->pointCount())
-    {
-        needRedraw_=true;
-        prevPointCount_=tools_->pointCount();
-    }
-    if(prevScale_!=tools_->scale())
+    if(prevPointCount_!=tools_->pointCount() || prevScale_!=tools_->scale() || prevSampleCount_!=tools_->sampleCount())
     {
         needRedraw_=true;
         prevScale_=tools_->scale();
+        prevPointCount_=tools_->pointCount();
+        prevSampleCount_=tools_->sampleCount();
     }
 
     glViewport(0, 0, width(), height());
@@ -314,6 +326,7 @@ void Canvas::paintGL()
             glareProgram_.bind();
             glareProgram_.setUniformValue("scale", float(std::pow(10., -tools_->scale())));
             glareProgram_.setUniformValue("pointCount", tools_->pointCount());
+            glareProgram_.setUniformValue("sampleCount", tools_->sampleCount());
             glareProgram_.setUniformValue("wavelength", wavelengths_[wlIndex]);
             glareProgram_.setUniformValue("imageSize", QVector2D(width(), height()));
             glareProgram_.setUniformValue("radianceToLuminance", radianceToLuminance(wlIndex));
