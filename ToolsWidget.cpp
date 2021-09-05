@@ -21,7 +21,7 @@ ToolsWidget::ToolsWidget(QWidget* parent)
     mainWidget->setLayout(layout);
     setWidget(mainWidget);
 
-    exposureCompensation_ = addManipulator(layout, this, tr(u8"\u0394e&xposure"), -5, 5, 0, 2);
+    exposure_ = addManipulator(layout, this, tr(u8"log<sub>10</sub>e&xposure"), -8, 7, 0, 2);
 
     layout->addStretch();
 }

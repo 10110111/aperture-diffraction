@@ -21,5 +21,7 @@ endif()
 add_executable(aperture
                 main.cpp
                 Canvas.cpp
+                ToolsWidget.cpp
+                Manipulator.cpp
               )
 target_link_libraries(aperture Qt5::Core Qt5::OpenGL Qt5::Concurrent)

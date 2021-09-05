@@ -8,6 +8,7 @@
 #include <QMessageBox>
 #include <QtConcurrent>
 #include "cie-xyzw-functions.hpp"
+#include "ToolsWidget.hpp"
 
 constexpr double degree = M_PI/180;
 constexpr int OPENGL_MAJOR_VERSION=3;
@@ -20,8 +21,9 @@ static QSurfaceFormat makeFormat()
     return format;
 }
 
-Canvas::Canvas(UpdateBehavior updateBehavior, QWindow* parent)
+Canvas::Canvas(ToolsWidget* tools, UpdateBehavior updateBehavior, QWindow* parent)
     : QOpenGLWindow(updateBehavior,parent)
+    , tools_(tools)
 {
     setFormat(makeFormat());
 }
@@ -327,8 +329,7 @@ void Canvas::paintGL()
         needRedraw_=false;
     }
     luminanceToScreen_.bind();
-    const float exposure=0.01;
-    luminanceToScreen_.setUniformValue("exposure", exposure);
+    luminanceToScreen_.setUniformValue("exposure", float(std::pow(10., tools_->exposure())));
     glBindTexture(GL_TEXTURE_2D, luminanceTexture_);
     luminanceToScreen_.setUniformValue("luminanceXYZW", 0);
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);

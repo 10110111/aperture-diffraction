@@ -5,11 +5,12 @@
 #include <QOpenGLShaderProgram>
 #include <QOpenGLFunctions_3_3_Core>
 
+class ToolsWidget;
 class Canvas : public QOpenGLWindow, public QOpenGLFunctions_3_3_Core
 {
     Q_OBJECT
 public:
-    Canvas(UpdateBehavior updateBehavior=NoPartialUpdate, QWindow* parent=nullptr);
+    Canvas(ToolsWidget* tools, UpdateBehavior updateBehavior=NoPartialUpdate, QWindow* parent=nullptr);
     ~Canvas();
 
 protected:
@@ -23,6 +24,7 @@ private:
     QVector4D radianceToLuminance(unsigned texIndex) const;
 
 private:
+    ToolsWidget* tools_=nullptr;
     GLuint vao_=0;
     GLuint vbo_=0;
     GLuint luminanceFBO_=0;

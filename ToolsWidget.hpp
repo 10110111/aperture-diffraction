@@ -10,11 +10,11 @@ class ToolsWidget : public QDockWidget
 public:
     ToolsWidget(QWidget* parent=nullptr);
 
-    double exposureCompensation() const { return exposureCompensation_->value(); }
+    double exposure() const { return exposure_->value(); }
 
 signals:
     void settingChanged();
 
 private:
-    Manipulator* exposureCompensation_=nullptr;
+    Manipulator* exposure_=nullptr;
 };
