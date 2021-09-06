@@ -133,17 +133,17 @@ vec2 sampleShift(const float sampleNumX, const float sampleNumY)
 void main()
 {
     XYZW=vec4(0);
+    const vec2 p1=vec2(0,0);
     for(int sampleNumY=0; sampleNumY<sampleCount; ++sampleNumY)
     {
         for(int sampleNumX=0; sampleNumX<sampleCount; ++sampleNumX)
         {
             vec2 shiftInPixel=sampleShift(sampleNumX,sampleNumY);
             float XYZW_re=0, XYZW_im=0;
-            for(int pointNum=2; pointNum<pointCount; ++pointNum)
+            for(int pointNum=1; pointNum<pointCount; ++pointNum)
             {
                 vec2 k = (gl_FragCoord.st - imageSize/2 + shiftInPixel)*scale/wavelength;
-                vec2 p1=vec2(1,0),
-                     p2=vec2(cos(2*PI*(pointNum-1)/pointCount), sin(2*PI*(pointNum-1)/pointCount)),
+                vec2 p2=vec2(cos(2*PI*(pointNum-1)/pointCount), sin(2*PI*(pointNum-1)/pointCount)),
                      p3=vec2(cos(2*PI* pointNum   /pointCount), sin(2*PI* pointNum   /pointCount));
                 float area = triangleArea(p1,p2,p3);
                 vec2 tri = triangle(p1,p2,p3,k);
