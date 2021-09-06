@@ -68,6 +68,8 @@ void main()
         const char*const fragSrc = 1+R"(
 #version 330
 uniform int pointCount;
+uniform int arcPointCount;
+uniform float curvatureRadius;
 uniform int sampleCount;
 uniform float scale;
 uniform float wavelength;
@@ -133,22 +135,37 @@ vec2 sampleShift(const float sampleNumX, const float sampleNumY)
 void main()
 {
     XYZW=vec4(0);
-    const vec2 p1=vec2(0,0);
+    const vec2 p0=vec2(0,0);
     for(int sampleNumY=0; sampleNumY<sampleCount; ++sampleNumY)
     {
         for(int sampleNumX=0; sampleNumX<sampleCount; ++sampleNumX)
         {
             vec2 shiftInPixel=sampleShift(sampleNumX,sampleNumY);
             float XYZW_re=0, XYZW_im=0;
-            for(int pointNum=1; pointNum<pointCount; ++pointNum)
+            for(int pointNum=1; pointNum<=pointCount; ++pointNum)
             {
                 vec2 k = (gl_FragCoord.st - imageSize/2 + shiftInPixel)*scale/wavelength;
-                vec2 p2=vec2(cos(2*PI*(pointNum-1)/pointCount), sin(2*PI*(pointNum-1)/pointCount)),
-                     p3=vec2(cos(2*PI* pointNum   /pointCount), sin(2*PI* pointNum   /pointCount));
-                float area = triangleArea(p1,p2,p3);
-                vec2 tri = triangle(p1,p2,p3,k);
-                XYZW_re += area*tri.x;
-                XYZW_im += area*tri.y;
+                float phi1 = 2*PI*(pointNum-1)/pointCount;
+                float phi2 = 2*PI* pointNum   /pointCount;
+                vec2 p1=vec2(cos(phi1), sin(phi1));
+                vec2 p2=vec2(cos(phi2), sin(phi2));
+                vec2 midPoint = (p1+p2)/2;
+                float arcCenterDistFromMid = sqrt(sqr(curvatureRadius)-dot(p1-p2,p1-p2)/4);
+                vec2 arcCenter = midPoint * (1-arcCenterDistFromMid/length(midPoint));
+                float arcPhi1 = atan(p1.y-arcCenter.y, p1.x-arcCenter.x);
+                float arcPhi2 = atan(p2.y-arcCenter.y, p2.x-arcCenter.x);
+                if(arcPhi2<arcPhi1) arcPhi2 += 2*PI;
+                for(float arcPointNum=0; arcPointNum<=arcPointCount; ++arcPointNum)
+                {
+                    float angle1=arcPhi1+(arcPhi2-arcPhi1)* arcPointNum   /(arcPointCount+1);
+                    float angle2=arcPhi1+(arcPhi2-arcPhi1)*(arcPointNum+1)/(arcPointCount+1);
+                    vec2 arcP1 = arcCenter + curvatureRadius*vec2(cos(angle1), sin(angle1));
+                    vec2 arcP2 = arcCenter + curvatureRadius*vec2(cos(angle2), sin(angle2));
+                    float area = triangleArea(p0,arcP1,arcP2);
+                    vec2 tri = triangle(p0,arcP1,arcP2,k);
+                    XYZW_re += area*tri.x;
+                    XYZW_im += area*tri.y;
+                }
             }
             XYZW += radianceToLuminance*(XYZW_re*XYZW_re+XYZW_im*XYZW_im);
         }
@@ -304,10 +321,14 @@ void Canvas::paintGL()
         lastHeight_=height();
         setupRenderTarget();
     }
-    if(prevPointCount_!=tools_->pointCount() || prevScale_!=tools_->scale() || prevSampleCount_!=tools_->sampleCount())
+    if(prevPointCount_!=tools_->pointCount() || prevArcPointCount_!=tools_->arcPointCount() ||
+       prevCurvatureRadius_!=tools_->curvatureRadius() || prevScale_!=tools_->scale() ||
+       prevSampleCount_!=tools_->sampleCount())
     {
         needRedraw_=true;
         prevScale_=tools_->scale();
+        prevArcPointCount_=tools_->arcPointCount();
+        prevCurvatureRadius_=tools_->curvatureRadius();
         prevPointCount_=tools_->pointCount();
         prevSampleCount_=tools_->sampleCount();
     }
@@ -326,6 +347,8 @@ void Canvas::paintGL()
             glareProgram_.bind();
             glareProgram_.setUniformValue("scale", float(std::pow(10., -tools_->scale())));
             glareProgram_.setUniformValue("pointCount", tools_->pointCount());
+            glareProgram_.setUniformValue("arcPointCount", tools_->arcPointCount());
+            glareProgram_.setUniformValue("curvatureRadius", float(tools_->curvatureRadius()));
             glareProgram_.setUniformValue("sampleCount", tools_->sampleCount());
             glareProgram_.setUniformValue("wavelength", wavelengths_[wlIndex]);
             glareProgram_.setUniformValue("imageSize", QVector2D(width(), height()));

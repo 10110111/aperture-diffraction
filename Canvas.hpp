@@ -29,6 +29,8 @@ private:
     double prevScale_=NAN;
     int prevPointCount_=-1;
     int prevSampleCount_=-1;
+    int prevArcPointCount_=-1;
+    double prevCurvatureRadius_=NAN;
     GLuint vao_=0;
     GLuint vbo_=0;
     GLuint luminanceFBO_=0;
