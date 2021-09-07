@@ -91,7 +91,7 @@ float sqr(float x) { return x*x; }
 //      http://dx.doi.org/10.1080/713819012
 vec2 triangle(vec2 s1, vec2 s2, vec2 s3, vec2 k)
 {
-    if(k==0) return vec2(1,0);
+    if(k==vec2(0)) return vec2(1,0);
     vec2 a1=s3-s2;
     vec2 b1=s1-s3;
     vec2 c1=s2-s1;
