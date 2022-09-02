@@ -145,8 +145,8 @@ void main()
             for(int pointNum=1; pointNum<=pointCount; ++pointNum)
             {
                 vec2 k = (gl_FragCoord.st - imageSize/2 + shiftInPixel)*scale/wavelength;
-                float phi1 = 2*PI*(pointNum-1)/pointCount;
-                float phi2 = 2*PI* pointNum   /pointCount;
+                float phi1 = 2*PI*(pointNum-1)/pointCount + (pointCount%2==1 ? PI/2 : 0);
+                float phi2 = 2*PI* pointNum   /pointCount + (pointCount%2==1 ? PI/2 : 0);
                 vec2 p1=vec2(cos(phi1), sin(phi1));
                 vec2 p2=vec2(cos(phi2), sin(phi2));
                 vec2 midPoint = (p1+p2)/2;
