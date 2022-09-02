@@ -129,7 +129,7 @@ vec2 triangle(vec2 s1, vec2 s2, vec2 s3, vec2 k)
 
 vec2 sampleShift(const float sampleNumX, const float sampleNumY)
 {
-    return vec2(sampleNumX+0.5, sampleNumY+0.5)/sampleCount-0.5;
+    return vec2(sampleNumX+0.5, sampleNumY+0.5)/sampleCount;
 }
 
 void main()
@@ -144,7 +144,7 @@ void main()
             float XYZW_re=0, XYZW_im=0;
             for(int pointNum=1; pointNum<=pointCount; ++pointNum)
             {
-                vec2 k = (gl_FragCoord.st - imageSize/2 + shiftInPixel)*scale/wavelength;
+                vec2 k = (gl_FragCoord.st - round(imageSize/2) + shiftInPixel)*scale/wavelength;
                 float phi1 = 2*PI*(pointNum-1)/pointCount + (pointCount%2==1 ? PI/2 : 0);
                 float phi2 = 2*PI* pointNum   /pointCount + (pointCount%2==1 ? PI/2 : 0);
                 vec2 p1=vec2(cos(phi1), sin(phi1));
