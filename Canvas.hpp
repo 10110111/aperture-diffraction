@@ -27,6 +27,7 @@ private:
 private:
     ToolsWidget* tools_=nullptr;
     double prevScale_=NAN;
+    double prevRotationAngle_=NAN;
     int prevPointCount_=-1;
     int prevSampleCount_=-1;
     int prevArcPointCount_=-1;

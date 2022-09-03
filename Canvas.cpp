@@ -73,6 +73,7 @@ uniform float curvatureRadius;
 uniform int sampleCount;
 uniform float scale;
 uniform float wavelength;
+uniform float globalRotationAngle;
 uniform vec4 radianceToLuminance;
 uniform vec2 imageSize;
 out vec4 XYZW;
@@ -145,8 +146,8 @@ void main()
             for(int pointNum=1; pointNum<=pointCount; ++pointNum)
             {
                 vec2 k = (gl_FragCoord.st - round(imageSize/2) + shiftInPixel)*scale/wavelength;
-                float phi1 = 2*PI*(pointNum-1)/pointCount + (pointCount%2==1 ? PI/2 : 0);
-                float phi2 = 2*PI* pointNum   /pointCount + (pointCount%2==1 ? PI/2 : 0);
+                float phi1 = 2*PI*(pointNum-1)/pointCount + (pointCount%2==1 ? PI/2 : 0) + globalRotationAngle;
+                float phi2 = 2*PI* pointNum   /pointCount + (pointCount%2==1 ? PI/2 : 0) + globalRotationAngle;
                 vec2 p1=vec2(cos(phi1), sin(phi1));
                 vec2 p2=vec2(cos(phi2), sin(phi2));
                 vec2 midPoint = (p1+p2)/2;
@@ -323,10 +324,11 @@ void Canvas::paintGL()
     }
     if(prevPointCount_!=tools_->pointCount() || prevArcPointCount_!=tools_->arcPointCount() ||
        prevCurvatureRadius_!=tools_->curvatureRadius() || prevScale_!=tools_->scale() ||
-       prevSampleCount_!=tools_->sampleCount())
+       prevSampleCount_!=tools_->sampleCount() || prevRotationAngle_!=tools_->globalRotationAngle())
     {
         needRedraw_=true;
         prevScale_=tools_->scale();
+        prevRotationAngle_=tools_->globalRotationAngle();
         prevArcPointCount_=tools_->arcPointCount();
         prevCurvatureRadius_=tools_->curvatureRadius();
         prevPointCount_=tools_->pointCount();
@@ -351,6 +353,7 @@ void Canvas::paintGL()
             glareProgram_.setUniformValue("curvatureRadius", float(tools_->curvatureRadius()));
             glareProgram_.setUniformValue("sampleCount", tools_->sampleCount());
             glareProgram_.setUniformValue("wavelength", wavelengths_[wlIndex]);
+            glareProgram_.setUniformValue("globalRotationAngle", float(tools_->globalRotationAngle()*degree));
             glareProgram_.setUniformValue("imageSize", QVector2D(width(), height()));
             glareProgram_.setUniformValue("radianceToLuminance", radianceToLuminance(wlIndex));
 
