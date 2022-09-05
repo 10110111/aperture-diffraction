@@ -345,12 +345,26 @@ void Canvas::paintGL()
     glViewport(0, 0, width(), height());
     glBindVertexArray(vao_);
 
-    if(needRedraw_)
+    if(needRedraw_ || drawingInProgress_)
     {
         GLint targetFBO=-1;
         glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &targetFBO);
 
         glBindFramebuffer(GL_FRAMEBUFFER,luminanceFBO_);
+
+        if(needRedraw_)
+        {
+            glClear(GL_COLOR_BUFFER_BIT);
+            drawingInProgress_=true;
+            currentDrawLine_=0;
+            drawLinesPerIteration_=1;
+        }
+
+        const auto time0=std::chrono::steady_clock::now();
+
+        const auto scissorHeight = std::min(currentDrawLine_ + drawLinesPerIteration_, height()) - currentDrawLine_;
+        glScissor(0,height()-currentDrawLine_-scissorHeight, width(), scissorHeight);
+        glEnable(GL_SCISSOR_TEST);
         for(unsigned wlIndex=0; wlIndex<wavelengths_.size(); ++wlIndex)
         {
             glareProgram_.bind();
@@ -375,6 +389,24 @@ void Canvas::paintGL()
             // some iteration on NVIDIA GTX 750 Ti with Linux binary driver 390.116. Seems like
             // command buffer overflowing, so here we force its execution.
             glFinish();
+        }
+        glDisable(GL_SCISSOR_TEST);
+        glScissor(0, 0, width(), height());
+
+        const auto time1=std::chrono::steady_clock::now();
+
+        currentDrawLine_ += drawLinesPerIteration_;
+
+        if(time1 - time0 < std::chrono::milliseconds(250))
+            drawLinesPerIteration_ *= 2;
+
+        if(currentDrawLine_ >= height())
+        {
+            drawingInProgress_=false;
+        }
+        else
+        {
+            QTimer::singleShot(0, [this]{ update(); });
         }
 
         glBindFramebuffer(GL_FRAMEBUFFER,targetFBO);

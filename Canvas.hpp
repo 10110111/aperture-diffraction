@@ -42,4 +42,7 @@ private:
     QOpenGLShaderProgram luminanceToScreen_;
     std::vector<float> wavelengths_;
     bool needRedraw_=true;
+    bool drawingInProgress_=false;
+    int currentDrawLine_=0;
+    int drawLinesPerIteration_=1;
 };
