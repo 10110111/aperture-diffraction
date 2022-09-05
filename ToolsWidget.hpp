@@ -17,6 +17,7 @@ public:
     int arcPointCount() const { return arcPointCount_->value(); }
     double curvatureRadius() const { return curvatureRadius_->value(); }
     int sampleCount() const { return sampleCount_->value(); }
+    int wavelengthCount() const { return wavelengthCount_->value(); }
 
 signals:
     void settingChanged();
@@ -29,4 +30,5 @@ private:
     Manipulator* arcPointCount_=nullptr;
     Manipulator* curvatureRadius_=nullptr;
     Manipulator* sampleCount_=nullptr;
+    Manipulator* wavelengthCount_=nullptr;
 };

@@ -256,7 +256,8 @@ void Canvas::setupWavelengths()
     constexpr double min=400; // nm
     constexpr double max=700; // nm
     constexpr auto range=max-min;
-    constexpr auto count=256;
+    const auto count=tools_->wavelengthCount();
+    wavelengths_.clear();
     for(int i=0;i<count;++i)
         wavelengths_.push_back(min+range*i/(count-1));
 }
@@ -322,9 +323,14 @@ void Canvas::paintGL()
         lastHeight_=height();
         setupRenderTarget();
     }
+
+    if(prevWavelengthCount_!=tools_->wavelengthCount())
+        setupWavelengths();
+
     if(prevPointCount_!=tools_->pointCount() || prevArcPointCount_!=tools_->arcPointCount() ||
        prevCurvatureRadius_!=tools_->curvatureRadius() || prevScale_!=tools_->scale() ||
-       prevSampleCount_!=tools_->sampleCount() || prevRotationAngle_!=tools_->globalRotationAngle())
+       prevSampleCount_!=tools_->sampleCount() || prevWavelengthCount_!=tools_->wavelengthCount() ||
+       prevRotationAngle_!=tools_->globalRotationAngle())
     {
         needRedraw_=true;
         prevScale_=tools_->scale();
@@ -333,6 +339,7 @@ void Canvas::paintGL()
         prevCurvatureRadius_=tools_->curvatureRadius();
         prevPointCount_=tools_->pointCount();
         prevSampleCount_=tools_->sampleCount();
+        prevWavelengthCount_=tools_->wavelengthCount();
     }
 
     glViewport(0, 0, width(), height());

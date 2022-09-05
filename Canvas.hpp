@@ -30,6 +30,7 @@ private:
     double prevRotationAngle_=NAN;
     int prevPointCount_=-1;
     int prevSampleCount_=-1;
+    int prevWavelengthCount_=-1;
     int prevArcPointCount_=-1;
     double prevCurvatureRadius_=NAN;
     GLuint vao_=0;
