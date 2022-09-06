@@ -23,5 +23,6 @@ add_executable(aperture
                 Canvas.cpp
                 ToolsWidget.cpp
                 Manipulator.cpp
+                ApertureOutline.cpp
               )
 target_link_libraries(aperture Qt5::Core Qt5::OpenGL Qt5::Concurrent)

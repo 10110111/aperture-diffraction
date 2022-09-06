@@ -8,6 +8,7 @@
 #include <QApplication>
 #include "Canvas.hpp"
 #include "ToolsWidget.hpp"
+#include "ApertureOutline.hpp"
 
 int main(int argc, char** argv)
 {
@@ -20,6 +21,13 @@ int main(int argc, char** argv)
     QObject::connect(tools, &ToolsWidget::settingChanged, canvas, qOverload<>(&Canvas::update));
     mainWin.setCentralWidget(widget);
     mainWin.addDockWidget(Qt::TopDockWidgetArea, tools);
+
+    const auto apertureOutline = new ApertureOutline(tools);
+    QObject::connect(tools, &ToolsWidget::settingChanged, apertureOutline, qOverload<>(&ApertureOutline::update));
+    const auto apOutDock = new QDockWidget("Aperture outline");
+    apOutDock->setWidget(apertureOutline);
+    mainWin.addDockWidget(Qt::TopDockWidgetArea, apOutDock);
+
     const auto size = app.primaryScreen()->size().height()/1.4;
     mainWin.resize(size,size);
     mainWin.show();
