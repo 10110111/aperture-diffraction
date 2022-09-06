@@ -26,7 +26,7 @@ ToolsWidget::ToolsWidget(QWidget* parent)
     globalRotationAngle_ = addManipulator(layout, this, tr(u8"&Rotation angle"), -90, 90, 0, 4, u8"°");
     pointCount_ = addManipulator(layout, this, tr(u8"Aperture ed&ge count"), 3, 100, 6, 0);
     arcPointCount_ = addManipulator(layout, this, tr(u8"&Points per arc (side)"), 0, 100, 0, 0);
-    curvatureRadius_ = addManipulator(layout, this, tr(u8"Radius of &curvature of side"), 0.9, 50, 50, 2);
+    curvatureRadius_ = addManipulator(layout, this, tr(u8"Radius of &curvature of side"), 1, 50, 50, 2);
     sampleCount_ = addManipulator(layout, this, tr(u8"Sa&mples per pixel side"), 1, 99, 1, 0);
     wavelengthCount_ = addManipulator(layout, this, tr(u8"Number of &wavelengths"), 2, 9999, 256, 0);
 
