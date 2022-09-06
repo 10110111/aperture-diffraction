@@ -37,12 +37,14 @@ private:
     GLuint vbo_=0;
     GLuint luminanceFBO_=0;
     GLuint luminanceTexture_=0;
+    GLuint depthRenderBuffer_=0;
     int lastWidth_=0, lastHeight_=0;
     QOpenGLShaderProgram glareProgram_;
     QOpenGLShaderProgram luminanceToScreen_;
     std::vector<float> wavelengths_;
     bool needRedraw_=true;
     bool drawingInProgress_=false;
-    int currentDrawLine_=0;
-    int drawLinesPerIteration_=1;
+    int prevRenderArea_=0;
+    int prevScissorHeight_=0;
+    int renderAreaPerIteration_=0;
 };

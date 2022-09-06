@@ -247,6 +247,11 @@ void Canvas::setupRenderTarget()
         glGenFramebuffers(1, &luminanceFBO_);
     glBindFramebuffer(GL_FRAMEBUFFER, luminanceFBO_);
     glFramebufferTexture(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,luminanceTexture_,0);
+    if(!depthRenderBuffer_)
+        glGenRenderbuffers(1, &depthRenderBuffer_);
+    glBindRenderbuffer(GL_RENDERBUFFER, depthRenderBuffer_);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width(), height());
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER,GL_DEPTH_ATTACHMENT,GL_RENDERBUFFER,depthRenderBuffer_);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glBindTexture(GL_TEXTURE_2D, 0);
 }
@@ -311,7 +316,7 @@ QVector4D Canvas::radianceToLuminance(const unsigned texIndex) const
 
 void Canvas::paintGL()
 {
-    if(!isVisible()) return;
+    if(!isVisible() || width()==0 || height()==0) return;
 
     if(width()!=lastWidth_ || height()!=lastHeight_)
     {
@@ -354,17 +359,26 @@ void Canvas::paintGL()
 
         if(needRedraw_)
         {
-            glClear(GL_COLOR_BUFFER_BIT);
+            glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
             drawingInProgress_=true;
-            currentDrawLine_=0;
-            drawLinesPerIteration_=1;
+            prevRenderArea_=0;
+            prevScissorHeight_=0;
+            renderAreaPerIteration_=50;
         }
 
         const auto time0=std::chrono::steady_clock::now();
 
-        const auto scissorHeight = std::min(currentDrawLine_ + drawLinesPerIteration_, height()) - currentDrawLine_;
-        glScissor(0,height()-currentDrawLine_-scissorHeight, width(), scissorHeight);
+        const auto aspectRatio = double(width())/height();
+        int scissorRectHeight = std::ceil(std::sqrt((renderAreaPerIteration_ + prevRenderArea_) / aspectRatio));
+        if(scissorRectHeight == prevScissorHeight_)
+            ++scissorRectHeight;
+        const int scissorRectWidth = scissorRectHeight*aspectRatio;
+        const int scissorRectX = ( width()-scissorRectWidth )/2;
+        const int scissorRectY = (height()-scissorRectHeight)/2;
+        glScissor(scissorRectX, scissorRectY, scissorRectWidth, scissorRectHeight);
         glEnable(GL_SCISSOR_TEST);
+
+        glEnable(GL_DEPTH_TEST);
         for(unsigned wlIndex=0; wlIndex<wavelengths_.size(); ++wlIndex)
         {
             glareProgram_.bind();
@@ -383,6 +397,7 @@ void Canvas::paintGL()
                 glDisable(GL_BLEND);
             else
                 glEnable(GL_BLEND);
+            glDepthMask(wlIndex+1 == wavelengths_.size()); // Only the last iteration updates the depth buffer
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
             glDisable(GL_BLEND);
             // This sync is required to avoid sudden appearance of black frames starting with
@@ -390,17 +405,19 @@ void Canvas::paintGL()
             // command buffer overflowing, so here we force its execution.
             glFinish();
         }
+        glDisable(GL_DEPTH_TEST);
         glDisable(GL_SCISSOR_TEST);
         glScissor(0, 0, width(), height());
 
         const auto time1=std::chrono::steady_clock::now();
 
-        currentDrawLine_ += drawLinesPerIteration_;
+        prevScissorHeight_ = scissorRectHeight;
+        prevRenderArea_ = scissorRectHeight*scissorRectWidth;
 
         if(time1 - time0 < std::chrono::milliseconds(250))
-            drawLinesPerIteration_ *= 2;
+            renderAreaPerIteration_ *= 2;
 
-        if(currentDrawLine_ >= height())
+        if(scissorRectX <= 0 && scissorRectY <= 0 && scissorRectWidth >= width() && scissorRectHeight >= height())
         {
             drawingInProgress_=false;
         }
