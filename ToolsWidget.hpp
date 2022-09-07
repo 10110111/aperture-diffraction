@@ -13,7 +13,7 @@ public:
 
     double exposure() const { return exposure_->value(); }
     double scale() const { return scale_->value(); }
-    double globalRotationAngle() const { return globalRotationAngle_->value()*std::acos(-1.)/180; }
+    double globalRotationAngle() const { return globalRotationAngle_->value()*-std::acos(-1.)/180; }
     int pointCount() const { return pointCount_->value(); }
     int arcPointCount() const { return arcPointCount_->value(); }
     double curvatureRadius() const { return curvatureRadius_->value(); }
