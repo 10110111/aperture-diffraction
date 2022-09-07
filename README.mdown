@@ -1,0 +1,30 @@
+# Aperture Diffraction
+
+This is a small program that lets one explore Fraunhofer diffraction patterns for light passing through regular polygonal apertures. It can simulate typical apertures used in photographic objectives. Curved sides are approximated by polylines.
+
+Here's how its UI looks:
+
+![](ui-screenshot.png)
+
+## Building
+
+Several packages are required to build this program.
+
+On Ubuntu 20.04 they can be installed by the following command:
+
+```
+sudo apt install git cmake g++ libglm-dev libqt5opengl5-dev
+```
+
+To fetch and build this program, use the following commands:
+
+```
+git clone https://github.com/10110111/aperture-diffraction.git
+cd aperture-diffraction
+mkdir build
+cd build
+cmake ..
+make
+```
+
+This will yield an executable called `aperdiff`, which you can directly run.
