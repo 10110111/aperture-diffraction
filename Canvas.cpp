@@ -253,8 +253,15 @@ void Canvas::setupWavelengths()
     constexpr auto range=max-min;
     const auto count=tools_->wavelengthCount();
     wavelengths_.clear();
-    for(int i=0;i<count;++i)
-        wavelengths_.push_back(min+range*i/(count-1));
+    if(count > 1)
+    {
+        for(int i=0;i<count;++i)
+            wavelengths_.push_back(min+range*i/(count-1));
+    }
+    else
+    {
+            wavelengths_.push_back(610);
+    }
 }
 
 void Canvas::initializeGL()
@@ -286,6 +293,11 @@ Canvas::~Canvas()
 
 QVector4D Canvas::radianceToLuminance(const unsigned texIndex) const
 {
+    if(wavelengths_.size() == 1)
+    {
+        const auto ret = 4000.f * wavelengthToXYZW(wavelengths_[texIndex]);
+        return QVector4D(ret.x, ret.y, ret.z, ret.w);
+    }
     using glm::mat4;
     const auto diag=[](GLfloat x, GLfloat y, GLfloat z, GLfloat w) { return mat4(x,0,0,0,
                                                                                  0,y,0,0,
