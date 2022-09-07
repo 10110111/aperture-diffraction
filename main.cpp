@@ -14,6 +14,7 @@ int main(int argc, char** argv)
 {
     QApplication app(argc, argv);
     QMainWindow mainWin;
+    mainWin.setWindowTitle("Aperture diffraction");
 
     const auto tools = new ToolsWidget;
     const auto canvas = new Canvas(tools);
