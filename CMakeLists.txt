@@ -21,6 +21,7 @@ endif()
 add_executable(aperture
                 main.cpp
                 Canvas.cpp
+                common.cpp
                 ToolsWidget.cpp
                 Manipulator.cpp
                 ApertureOutline.cpp

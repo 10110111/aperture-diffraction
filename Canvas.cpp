@@ -9,23 +9,14 @@
 #include <QtConcurrent>
 #include "cie-xyzw-functions.hpp"
 #include "ToolsWidget.hpp"
+#include "common.hpp"
 
 constexpr double degree = M_PI/180;
-constexpr int OPENGL_MAJOR_VERSION=3;
-constexpr int OPENGL_MINOR_VERSION=3;
-static QSurfaceFormat makeFormat()
-{
-    QSurfaceFormat format;
-    format.setVersion(OPENGL_MAJOR_VERSION,OPENGL_MINOR_VERSION);
-    format.setProfile(QSurfaceFormat::CoreProfile);
-    return format;
-}
-
 Canvas::Canvas(ToolsWidget* tools, UpdateBehavior updateBehavior, QWindow* parent)
     : QOpenGLWindow(updateBehavior,parent)
     , tools_(tools)
 {
-    setFormat(makeFormat());
+    setFormat(makeGLSurfaceFormat());
 }
 
 void Canvas::setupBuffers()
