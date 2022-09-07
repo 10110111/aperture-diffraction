@@ -18,7 +18,7 @@ if(NOT HAVE_GLM)
     message(FATAL_ERROR "GLM was not found")
 endif()
 
-add_executable(aperture
+add_executable(aperdiff
                 main.cpp
                 Canvas.cpp
                 common.cpp
@@ -26,4 +26,4 @@ add_executable(aperture
                 Manipulator.cpp
                 ApertureOutline.cpp
               )
-target_link_libraries(aperture Qt5::Core Qt5::OpenGL Qt5::Concurrent)
+target_link_libraries(aperdiff Qt5::Core Qt5::OpenGL Qt5::Concurrent)
