@@ -18,7 +18,9 @@ if(NOT HAVE_GLM)
     message(FATAL_ERROR "GLM was not found")
 endif()
 
+qt5_add_resources(RES_SOURCES resources.qrc)
 add_executable(aperdiff
+                ${RES_SOURCES}
                 main.cpp
                 Canvas.cpp
                 common.cpp
