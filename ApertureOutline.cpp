@@ -108,7 +108,7 @@ void ApertureOutline::paintGL()
 
     const int sampleCount = tools_->sampleCount();
     const int pointCount = tools_->pointCount();
-    const float globalRotationAngle = tools_->globalRotationAngle()*PI/180;
+    const float globalRotationAngle = tools_->globalRotationAngle();
     const float curvatureRadius = tools_->curvatureRadius();
     const float arcPointCount = tools_->arcPointCount();
 

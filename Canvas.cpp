@@ -11,7 +11,6 @@
 #include "ToolsWidget.hpp"
 #include "common.hpp"
 
-constexpr double degree = M_PI/180;
 Canvas::Canvas(ToolsWidget* tools, UpdateBehavior updateBehavior, QWindow* parent)
     : QOpenGLWindow(updateBehavior,parent)
     , tools_(tools)
@@ -379,7 +378,7 @@ void Canvas::paintGL()
             glareProgram_.setUniformValue("curvatureRadius", float(tools_->curvatureRadius()));
             glareProgram_.setUniformValue("sampleCount", tools_->sampleCount());
             glareProgram_.setUniformValue("wavelength", wavelengths_[wlIndex]);
-            glareProgram_.setUniformValue("globalRotationAngle", float(tools_->globalRotationAngle()*degree));
+            glareProgram_.setUniformValue("globalRotationAngle", float(tools_->globalRotationAngle()));
             glareProgram_.setUniformValue("imageSize", QVector2D(width(), height()));
             glareProgram_.setUniformValue("radianceToLuminance", radianceToLuminance(wlIndex));
 
