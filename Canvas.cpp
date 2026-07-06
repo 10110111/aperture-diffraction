@@ -464,11 +464,16 @@ void Canvas::saveImage()
     const auto XYZ2sRGBl=mat3(vec3(3.2406,-0.9689,0.0557),
                               vec3(-1.5372,1.8758,-0.204),
                               vec3(-0.4986,0.0415,1.057));
+    float max = -INFINITY;
     for(auto& v : data)
     {
         const vec3 rgb = XYZ2sRGBl * vec3(v);
         v = vec4(rgb, 1);
+        const auto currMax = std::max({rgb.r, rgb.g, rgb.b});
+        if(currMax > max) max = currMax;
     }
+    for(auto& v : data)
+        v = vec4(vec3(v) / max, 1);
     QImage img(reinterpret_cast<const uchar*>(data.data()), w, h, QImage::Format_RGBX32FPx4);
     img.setColorSpace(QColorSpace::SRgbLinear);
     QImageWriter writer(path);
