@@ -4,6 +4,7 @@
 #include <QDockWidget>
 #include "Manipulator.hpp"
 
+class QPushButton;
 class ToolsWidget : public QDockWidget
 {
     Q_OBJECT
@@ -22,6 +23,7 @@ public:
 
 signals:
     void settingChanged();
+    void imageSavingRequest();
 
 private:
     Manipulator* exposure_=nullptr;
@@ -32,4 +34,5 @@ private:
     Manipulator* curvatureRadius_=nullptr;
     Manipulator* sampleCount_=nullptr;
     Manipulator* wavelengthCount_=nullptr;
+    QPushButton* saveBtn_=nullptr;
 };

@@ -1,5 +1,6 @@
 #include "ToolsWidget.hpp"
 #include "Manipulator.hpp"
+#include <QPushButton>
 
 static Manipulator* addManipulator(QVBoxLayout*const layout, ToolsWidget*const tools,
                                    QString const& label, const double min, const double max, const double defaultValue,
@@ -29,6 +30,11 @@ ToolsWidget::ToolsWidget(QWidget* parent)
     curvatureRadius_ = addManipulator(layout, this, tr(u8"Ra&dius of curvature of side"), 1, 50, 3, 2);
     sampleCount_ = addManipulator(layout, this, tr(u8"Sa&mples per pixel side"), 1, 19, 1, 0);
     wavelengthCount_ = addManipulator(layout, this, tr(u8"Number of &wavelengths"), 1, 9999, 256, 0);
+#if QT_VERSION >= QT_VERSION_CHECK(6,2,0) // Requires QImage::Format_RGBX32FPx4
+    saveBtn_ = new QPushButton(tr("Sa&ve image"));
+    layout->addWidget(saveBtn_);
+    connect(saveBtn_, &QPushButton::clicked, this, &ToolsWidget::imageSavingRequest);
+#endif
 
     layout->addStretch();
 }

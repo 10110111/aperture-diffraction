@@ -18,6 +18,7 @@ protected:
     void initializeGL() override;
     void paintGL() override;
 private:
+    void saveImage();
     void setupBuffers();
     void setupShaders();
     void setupWavelengths();

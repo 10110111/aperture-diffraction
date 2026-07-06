@@ -3,9 +3,13 @@
 #include <cstring>
 #include <glm/glm.hpp>
 #include <QDebug>
+#include <QImage>
 #include <QPainter>
+#include <QColorSpace>
 #include <QMouseEvent>
 #include <QMessageBox>
+#include <QImageWriter>
+#include <QFileDialog>
 #include <QtConcurrent>
 #include "cie-xyzw-functions.hpp"
 #include "ToolsWidget.hpp"
@@ -16,6 +20,7 @@ Canvas::Canvas(ToolsWidget* tools, UpdateBehavior updateBehavior, QWindow* paren
     , tools_(tools)
 {
     setFormat(makeGLSurfaceFormat());
+    connect(tools_, &ToolsWidget::imageSavingRequest, this, &Canvas::saveImage);
 }
 
 void Canvas::setupBuffers()
@@ -439,4 +444,38 @@ void Canvas::paintGL()
     glBindTexture(GL_TEXTURE_2D, 0);
 
     glBindVertexArray(0);
+}
+
+void Canvas::saveImage()
+{
+#if QT_VERSION >= QT_VERSION_CHECK(6,2,0)
+    const auto path=QFileDialog::getSaveFileName(tools_, tr("Save image"), {}, "TIFF files (*.tiff *.tif)");
+    if(path.isNull())
+        return;
+
+    makeCurrent();
+    GLint oldFBO=-1;
+    glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &oldFBO);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, luminanceFBO_);
+    const int w = width(), h = height();
+    using namespace glm;
+    std::vector<vec4> data(w * h);
+    glReadPixels(0, 0, w, h, GL_RGBA, GL_FLOAT, data.data());
+    const auto XYZ2sRGBl=mat3(vec3(3.2406,-0.9689,0.0557),
+                              vec3(-1.5372,1.8758,-0.204),
+                              vec3(-0.4986,0.0415,1.057));
+    for(auto& v : data)
+    {
+        const vec3 rgb = XYZ2sRGBl * vec3(v);
+        v = vec4(rgb, 1);
+    }
+    QImage img(reinterpret_cast<const uchar*>(data.data()), w, h, QImage::Format_RGBX32FPx4);
+    img.setColorSpace(QColorSpace::SRgbLinear);
+    QImageWriter writer(path);
+    writer.setFormat("tiff");
+    if(!writer.write(img))
+        QMessageBox::critical(tools_, tr("Failed to save image"),
+                              tr("Failed to save image to %1: %2").arg(path).arg(writer.errorString()));
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, oldFBO);
+#endif
 }
