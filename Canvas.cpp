@@ -13,6 +13,7 @@
 #include <QtConcurrent>
 #include "cie-xyzw-functions.hpp"
 #include "ToolsWidget.hpp"
+#include "cie-d65.hpp"
 #include "common.hpp"
 
 Canvas::Canvas(ToolsWidget* tools, UpdateBehavior updateBehavior, QWindow* parent)
@@ -197,21 +198,12 @@ QVector4D Canvas::radianceToLuminance(const unsigned texIndex) const
         const auto ret = 4000.f * wavelengthToXYZW(wavelengths_[texIndex]);
         return QVector4D(ret.x, ret.y, ret.z, ret.w);
     }
-    using glm::mat4;
-    const auto diag=[](GLfloat x, GLfloat y, GLfloat z, GLfloat w) { return mat4(x,0,0,0,
-                                                                                 0,y,0,0,
-                                                                                 0,0,z,0,
-                                                                                 0,0,0,w); };
     const auto wlCount = wavelengths_.size();
-    // Weights for the trapezoidal quadrature rule
-    const auto weights = wlCount==4            ? diag(0.5,1,1,0.5) :
-                         texIndex==0           ? diag(0.5,1,1,1  ) :
-                         texIndex+1==wlCount/4 ? diag(  1,1,1,0.5) :
-                                                 diag(  1,1,1,1);
-    const auto dlambda = weights * abs(wavelengths_.back()-wavelengths_.front()) / (wlCount-1.f);
-    // Ref: Rapport BIPM-2019/05. Principles Governing Photometry, 2nd edition. Sections 6.2, 6.3.
-    const auto maxLuminousEfficacy=diag(683.002f,683.002f,683.002f,1700.13f); // lm/W
-    const auto ret = maxLuminousEfficacy * wavelengthToXYZW(wavelengths_[texIndex]) * dlambda;
+    // Weight for the trapezoidal quadrature rule
+    const float weight = texIndex==0 || texIndex==wlCount-1 ? 0.5 : 1;
+    const float dlambda = weight * std::abs(wavelengths_.back()-wavelengths_.front()) / (wlCount-1.f);
+    const float wl = wavelengths_[texIndex];
+    const auto ret = illuminantD65(wl) * wavelengthToXYZW(wl) * dlambda;
     return QVector4D(ret.x, ret.y, ret.z, ret.w);
 }
 
