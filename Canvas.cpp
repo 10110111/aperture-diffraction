@@ -275,12 +275,12 @@ void Canvas::paintGL()
         for(unsigned wlIndex=0; wlIndex<wavelengths_.size(); ++wlIndex)
         {
             glareProgram_.bind();
-            glareProgram_.setUniformValue("scale", float(std::pow(10., -tools_->scale())));
+            glareProgram_.setUniformValue("targetWidth", float(std::pow(10., 3-tools_->scale())));
             glareProgram_.setUniformValue("pointCount", tools_->pointCount());
             glareProgram_.setUniformValue("arcPointCount", tools_->arcPointCount());
             glareProgram_.setUniformValue("curvatureRadius", float(tools_->curvatureRadius()));
             glareProgram_.setUniformValue("sampleCount", tools_->sampleCount());
-            glareProgram_.setUniformValue("wavelength", wavelengths_[wlIndex]);
+            glareProgram_.setUniformValue("wavenumber", float(2e6*M_PI / wavelengths_[wlIndex]));
             glareProgram_.setUniformValue("globalRotationAngle", float(tools_->globalRotationAngle()));
             glareProgram_.setUniformValue("imageSize", QVector2D(width(), height()));
             glareProgram_.setUniformValue("radianceToLuminance", radianceToLuminance(wlIndex));

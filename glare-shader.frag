@@ -4,8 +4,8 @@ uniform int pointCount;
 uniform int arcPointCount;
 uniform float curvatureRadius;
 uniform int sampleCount;
-uniform float scale;
-uniform float wavelength;
+uniform float targetWidth; // mm
+uniform float wavenumber; // mm^-1
 uniform float globalRotationAngle;
 uniform vec4 radianceToLuminance;
 uniform vec2 imageSize;
@@ -75,10 +75,17 @@ void main()
         for(int sampleNumX=0; sampleNumX<sampleCount; ++sampleNumX)
         {
             vec2 shiftInPixel=sampleShift(sampleNumX,sampleNumY);
+            // Distance from the center in mm at a distance of 10m from the aperture
+            vec2 pointInTargetPlane = (gl_FragCoord.st - round(imageSize/2) + shiftInPixel) / (imageSize.x/2) * targetWidth;
+            const float distToTargetPlane = 10e3; // mm
+            // Distance from the center of the aperture to the point in the target plane
+            float distToPoint = sqrt(dot(pointInTargetPlane, pointInTargetPlane) + sqr(distToTargetPlane));
+            // Projection of the wave vector onto the plane of the aperture
+            vec2 k = wavenumber * pointInTargetPlane / distToPoint;
+
             float XYZW_re=0, XYZW_im=0;
             for(int pointNum=1; pointNum<=pointCount; ++pointNum)
             {
-                vec2 k = (gl_FragCoord.st - round(imageSize/2) + shiftInPixel)*scale/wavelength;
                 float phi1 = 2*PI*(pointNum-1)/pointCount + (pointCount%2==1 ? PI/2 : 0) + globalRotationAngle;
                 float phi2 = 2*PI* pointNum   /pointCount + (pointCount%2==1 ? PI/2 : 0) + globalRotationAngle;
                 vec2 p1=vec2(cos(phi1), sin(phi1));

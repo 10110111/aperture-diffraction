@@ -23,7 +23,7 @@ ToolsWidget::ToolsWidget(QWidget* parent)
     setWidget(mainWidget);
 
     exposure_ = addManipulator(layout, this, tr(u8"log<sub>10</sub>e&xposure"), -8, 7, -2, 2);
-    scale_    = addManipulator(layout, this, tr(u8"log<sub>10</sub>&scale"), -5, 1, -3, 2);
+    scale_    = addManipulator(layout, this, tr(u8"log<sub>10</sub>&scale"), -2, 2, 0, 2);
     globalRotationAngle_ = addManipulator(layout, this, tr(u8"&Rotation angle"), -90, 90, 14, 4, u8"°");
     pointCount_ = addManipulator(layout, this, tr(u8"&Aperture edge count"), 3, 99, 6, 0);
     arcPointCount_ = addManipulator(layout, this, tr(u8"&Points per arc (side)"), 0, 99, 25, 0);
