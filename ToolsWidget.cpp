@@ -22,7 +22,7 @@ ToolsWidget::ToolsWidget(QWidget* parent)
     mainWidget->setLayout(layout);
     setWidget(mainWidget);
 
-    exposure_ = addManipulator(layout, this, tr(u8"log<sub>10</sub>e&xposure"), -8, 7, -2, 2);
+    exposure_ = addManipulator(layout, this, tr(u8"log<sub>10</sub>e&xposure"), -8, 7, 0, 2);
     screenWidth_ = addManipulator(layout, this, tr(u8"Screen width (10 m away)"), 0.01, 100, 1, 2, tr(" m"), true);
     globalRotationAngle_ = addManipulator(layout, this, tr(u8"&Rotation angle"), -90, 90, 14, 4, u8"°");
     pointCount_ = addManipulator(layout, this, tr(u8"&Aperture edge count"), 3, 99, 6, 0);
