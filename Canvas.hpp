@@ -33,6 +33,7 @@ private:
     int prevSampleCount_=-1;
     int prevWavelengthCount_=-1;
     int prevArcPointCount_=-1;
+    double prevApertureRadius_=NAN;
     double prevCurvatureRadius_=NAN;
     GLuint vao_=0;
     GLuint vbo_=0;

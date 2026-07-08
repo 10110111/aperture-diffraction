@@ -9,6 +9,7 @@ uniform float wavenumber; // mm^-1
 uniform float globalRotationAngle;
 uniform vec4 radianceToLuminance;
 uniform vec2 imageSize;
+uniform float apertureRadius; // mm
 out vec4 XYZW;
 const float PI=3.14159265;
 
@@ -102,6 +103,8 @@ void main()
                     float angle2=arcPhi1+(arcPhi2-arcPhi1)*(arcPointNum+1)/(arcPointCount+1);
                     vec2 arcP1 = arcCenter + curvatureRadius*vec2(cos(angle1), sin(angle1));
                     vec2 arcP2 = arcCenter + curvatureRadius*vec2(cos(angle2), sin(angle2));
+                    arcP1 *= apertureRadius;
+                    arcP2 *= apertureRadius;
                     float area = triangleArea(p0,arcP1,arcP2);
                     vec2 tri = triangle(p0,arcP1,arcP2,k);
                     XYZW_re += area*tri.x;

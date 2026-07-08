@@ -226,6 +226,7 @@ void Canvas::paintGL()
         setupWavelengths();
 
     if(prevPointCount_!=tools_->pointCount() || prevArcPointCount_!=tools_->arcPointCount() ||
+       prevApertureRadius_!=tools_->apertureRadius() ||
        prevCurvatureRadius_!=tools_->curvatureRadius() || prevScale_!=tools_->scale() ||
        prevSampleCount_!=tools_->sampleCount() || prevWavelengthCount_!=tools_->wavelengthCount() ||
        prevRotationAngle_!=tools_->globalRotationAngle())
@@ -234,6 +235,7 @@ void Canvas::paintGL()
         prevScale_=tools_->scale();
         prevRotationAngle_=tools_->globalRotationAngle();
         prevArcPointCount_=tools_->arcPointCount();
+        prevApertureRadius_=tools_->apertureRadius();
         prevCurvatureRadius_=tools_->curvatureRadius();
         prevPointCount_=tools_->pointCount();
         prevSampleCount_=tools_->sampleCount();
@@ -279,6 +281,7 @@ void Canvas::paintGL()
             glareProgram_.setUniformValue("pointCount", tools_->pointCount());
             glareProgram_.setUniformValue("arcPointCount", tools_->arcPointCount());
             glareProgram_.setUniformValue("curvatureRadius", float(tools_->curvatureRadius()));
+            glareProgram_.setUniformValue("apertureRadius", float(tools_->apertureRadius()));
             glareProgram_.setUniformValue("sampleCount", tools_->sampleCount());
             glareProgram_.setUniformValue("wavenumber", float(2e6*M_PI / wavelengths_[wlIndex]));
             glareProgram_.setUniformValue("globalRotationAngle", float(tools_->globalRotationAngle()));
