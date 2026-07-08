@@ -13,7 +13,7 @@ public:
     ToolsWidget(QWidget* parent=nullptr);
 
     double exposure() const { return exposure_->value(); }
-    double scale() const { return scale_->value(); }
+    double screenWidth() const { return screenWidth_->value(); }
     double globalRotationAngle() const { return globalRotationAngle_->value()*-std::acos(-1.)/180; }
     int pointCount() const { return pointCount_->value(); }
     int arcPointCount() const { return arcPointCount_->value(); }
@@ -28,7 +28,7 @@ signals:
 
 private:
     Manipulator* exposure_=nullptr;
-    Manipulator* scale_=nullptr;
+    Manipulator* screenWidth_=nullptr;
     Manipulator* globalRotationAngle_=nullptr;
     Manipulator* pointCount_=nullptr;
     Manipulator* arcPointCount_=nullptr;

@@ -227,12 +227,12 @@ void Canvas::paintGL()
 
     if(prevPointCount_!=tools_->pointCount() || prevArcPointCount_!=tools_->arcPointCount() ||
        prevApertureRadius_!=tools_->apertureRadius() ||
-       prevCurvatureRadius_!=tools_->curvatureRadius() || prevScale_!=tools_->scale() ||
+       prevCurvatureRadius_!=tools_->curvatureRadius() || prevScreenWidth_!=tools_->screenWidth() ||
        prevSampleCount_!=tools_->sampleCount() || prevWavelengthCount_!=tools_->wavelengthCount() ||
        prevRotationAngle_!=tools_->globalRotationAngle())
     {
         needRedraw_=true;
-        prevScale_=tools_->scale();
+        prevScreenWidth_=tools_->screenWidth();
         prevRotationAngle_=tools_->globalRotationAngle();
         prevArcPointCount_=tools_->arcPointCount();
         prevApertureRadius_=tools_->apertureRadius();
@@ -277,7 +277,7 @@ void Canvas::paintGL()
         for(unsigned wlIndex=0; wlIndex<wavelengths_.size(); ++wlIndex)
         {
             glareProgram_.bind();
-            glareProgram_.setUniformValue("targetWidth", float(std::pow(10., 3-tools_->scale())));
+            glareProgram_.setUniformValue("targetWidth", float(1000*tools_->screenWidth()));
             glareProgram_.setUniformValue("pointCount", tools_->pointCount());
             glareProgram_.setUniformValue("arcPointCount", tools_->arcPointCount());
             glareProgram_.setUniformValue("curvatureRadius", float(tools_->curvatureRadius()));
