@@ -2,13 +2,13 @@ R"(
 #version 330
 uniform int pointCount;
 uniform int arcPointCount;
-uniform float curvatureRadius;
+uniform float curvatureRadius; // mm
 uniform int sampleCount;
 uniform float targetWidth; // mm
 uniform float wavenumber; // mm^-1
 uniform float globalRotationAngle;
 uniform vec4 radianceToLuminance;
-uniform vec2 imageSize;
+uniform vec2 imageSize; // px
 uniform float apertureRadius; // mm
 out vec4 XYZW;
 const float PI=3.14159265;
