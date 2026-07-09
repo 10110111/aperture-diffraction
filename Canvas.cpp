@@ -301,15 +301,12 @@ void Canvas::paintGL()
             glDepthMask(wlIndex+1 == wavelengths_.size()); // Only the last iteration updates the depth buffer
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
             glDisable(GL_BLEND);
-            // This sync is required to avoid sudden appearance of black frames starting with
-            // some iteration on NVIDIA GTX 750 Ti with Linux binary driver 390.116. Seems like
-            // command buffer overflowing, so here we force its execution.
-            glFinish();
         }
         glDisable(GL_DEPTH_TEST);
         glDisable(GL_SCISSOR_TEST);
         glScissor(0, 0, width(), height());
 
+        glFinish();
         const auto time1=std::chrono::steady_clock::now();
 
         prevScissorHeight_ = scissorRectHeight;
