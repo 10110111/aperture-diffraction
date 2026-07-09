@@ -11,6 +11,7 @@
 #include <QImageWriter>
 #include <QFileDialog>
 #include <QtConcurrent>
+#include "GLSLCosineQualityChecker.hpp"
 #include "cie-xyzw-functions.hpp"
 #include "ToolsWidget.hpp"
 #include "cie-d65.hpp"
@@ -61,10 +62,7 @@ void main()
         if(!glareProgram_.addShaderFromSourceCode(QOpenGLShader::Vertex, vertSrc))
            QMessageBox::critical(nullptr, tr("Shader compile failure"),
                                  tr("Failed to compile %1:\n%2").arg("glare vertex shader").arg(glareProgram_.log()));
-        const char*const fragSrc =
-#include "glare-shader.frag"
-        ;
-        if(!glareProgram_.addShaderFromSourceCode(QOpenGLShader::Fragment, fragSrc))
+        if(!glareProgram_.addShaderFromSourceCode(QOpenGLShader::Fragment, glareFragShader))
            QMessageBox::critical(nullptr, tr("Error compiling shader"),
                                  tr("Failed to compile %1:\n%2").arg("glare fragment shader").arg(glareProgram_.log()));
         if(!glareProgram_.link())
@@ -173,6 +171,13 @@ void Canvas::initializeGL()
                                     .arg(OPENGL_MINOR_VERSION));
         return;
     }
+
+    GLSLCosineQualityChecker cosineChecker(*this);
+    const bool cosineIsOK = cosineChecker.isGood();
+    glareFragShader =
+#include "glare-shader.frag"
+        ;
+    glareFragShader.replace("COSINE_IS_BROKEN", cosineIsOK ? "0" : "1");
 
     setupBuffers();
     setupRenderTarget();

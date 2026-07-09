@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <QVector4D>
+#include <QByteArray>
 #include <QOpenGLWindow>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLFunctions_3_3_Core>
@@ -49,4 +50,5 @@ private:
     int prevRenderArea_=0;
     int prevScissorHeight_=0;
     int renderAreaPerIteration_=0;
+    QByteArray glareFragShader;
 };

@@ -51,6 +51,7 @@ add_executable(aperdiff
                 ToolsWidget.cpp
                 Manipulator.cpp
                 ApertureOutline.cpp
+                GLSLCosineQualityChecker.cpp
               )
 target_link_libraries(aperdiff
     Qt${QT_VERSION_MAJOR}::Core

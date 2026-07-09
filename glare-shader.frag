@@ -13,6 +13,20 @@ uniform float apertureRadius; // mm
 out vec4 XYZW;
 const float PI=3.14159265;
 
+#if COSINE_IS_BROKEN
+// Define Chebyshoff approximations for sin and cos
+float sin(float x)
+{
+    x = mod(x+PI, 2*PI)-PI;
+    return x*(0.999999599920672 + x*x*(-0.166665526354071 + x*x*(0.00833240298869917 + x*x*(-0.0001980863334175 + x*x*(2.69971463693744e-6 - 2.03622449118901e-8*x*x)))));
+}
+float cos(float x)
+{
+    x = mod(x+PI, 2*PI)-PI;
+    return 0.999999210782322 + x*x*(-0.499994213384716 + x*x*(0.0416597778065509 + x*x*(-0.00138587899196014 + x*x*(0.0000242029413673591 - 2.19729638194131e-7*x*x))));
+}
+#endif
+
 float triangleArea(vec2 p1, vec2 p2, vec2 p3)
 {
     return p1.y*p2.x + p2.y*p3.x + p1.x*p3.y - p1.x*p2.y - p1.y*p3.x - p2.x*p3.y;
