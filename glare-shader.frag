@@ -114,6 +114,14 @@ void main()
             XYZW += radianceToLuminance*(XYZW_re*XYZW_re+XYZW_im*XYZW_im);
         }
     }
+
+    // Properly weigh according to the large-z asymptotics of the field
+    // \int F(k_x,k_y)*exp(i(k_x*x+k_y*y+z*\sqrt{|k|^2-k_x^2-k_y^2})) dk_x dk_y
+    //
+    // The field is proportional to k, but we use the ratio of k to that
+    // of the 555nm light to avoid having to alter exposure.
+    XYZW *= sqr(wavenumber / (2e6*PI/555));
+
     XYZW /= sqr(sampleCount);
 }
 )"
