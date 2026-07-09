@@ -68,8 +68,8 @@ void main()
            QMessageBox::critical(nullptr, tr("Error compiling shader"),
                                  tr("Failed to compile %1:\n%2").arg("glare fragment shader").arg(glareProgram_.log()));
         if(!glareProgram_.link())
-            throw QMessageBox::critical(nullptr, tr("Error linking shader program"),
-                                        tr("Failed to link %1:\n%2").arg("glare shader program").arg(glareProgram_.log()));
+            QMessageBox::critical(nullptr, tr("Error linking shader program"),
+                                  tr("Failed to link %1:\n%2").arg("glare shader program").arg(glareProgram_.log()));
     }
     {
         const char*const vertSrc = 1+R"(
@@ -119,8 +119,8 @@ void main()
             QMessageBox::critical(nullptr, tr("Error compiling shader"),
                                   tr("Failed to compile %1:\n%2").arg("luminance-to-sRGB fragment shader").arg(luminanceToScreen_.log()));
         if(!luminanceToScreen_.link())
-            throw QMessageBox::critical(nullptr, tr("Error linking shader program"),
-                                        tr("Failed to link %1:\n%2").arg("luminance-to-sRGB shader program").arg(luminanceToScreen_.log()));
+            QMessageBox::critical(nullptr, tr("Error linking shader program"),
+                                  tr("Failed to link %1:\n%2").arg("luminance-to-sRGB shader program").arg(luminanceToScreen_.log()));
     }
 }
 
