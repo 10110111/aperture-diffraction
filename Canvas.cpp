@@ -320,11 +320,13 @@ void Canvas::paintGL()
                     glareProgram_.setUniformValue("colorScale", colorScale);
 
                     glBlendFunc(GL_ONE, GL_ONE);
-                    if(wlIndex==0)
+                    if(wlIndex==0 && sampleNumX==0 && sampleNumY==0)
                         glDisable(GL_BLEND);
                     else
                         glEnable(GL_BLEND);
-                    glDepthMask(wlIndex+1 == wavelengths_.size()); // Only the last iteration updates the depth buffer
+
+                    // Only the last iteration updates the depth buffer
+                    glDepthMask(wlIndex+1 == wavelengths_.size() && sampleNumY+1 == sampleCount && sampleNumX+1 == sampleCount);
                     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
                     glDisable(GL_BLEND);
                 }
