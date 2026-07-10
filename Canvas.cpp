@@ -17,6 +17,15 @@
 #include "cie-d65.hpp"
 #include "common.hpp"
 
+namespace
+{
+QVector2D sampleShift(const float sampleNumX, const float sampleNumY, const float sampleCount)
+{
+    return QVector2D(sampleNumX+0.5f, sampleNumY+0.5f)/sampleCount;
+}
+template<typename T> auto sqr(T x) { return x*x; }
+}
+
 Canvas::Canvas(ToolsWidget* tools, UpdateBehavior updateBehavior, QWindow* parent)
     : QOpenGLWindow(updateBehavior,parent)
     , tools_(tools)
@@ -279,28 +288,47 @@ void Canvas::paintGL()
         glEnable(GL_SCISSOR_TEST);
 
         glEnable(GL_DEPTH_TEST);
+        glareProgram_.bind();
+        const int sampleCount = tools_->sampleCount();
         for(unsigned wlIndex=0; wlIndex<wavelengths_.size(); ++wlIndex)
         {
-            glareProgram_.bind();
-            glareProgram_.setUniformValue("targetWidth", float(1000*tools_->screenWidth()));
-            glareProgram_.setUniformValue("pointCount", tools_->pointCount());
-            glareProgram_.setUniformValue("arcPointCount", tools_->arcPointCount());
-            glareProgram_.setUniformValue("curvatureRadius", float(tools_->curvatureRadius()));
-            glareProgram_.setUniformValue("apertureRadius", float(tools_->apertureRadius()));
-            glareProgram_.setUniformValue("sampleCount", tools_->sampleCount());
-            glareProgram_.setUniformValue("wavenumber", float(2e6*M_PI / wavelengths_[wlIndex]));
-            glareProgram_.setUniformValue("globalRotationAngle", float(tools_->globalRotationAngle()));
-            glareProgram_.setUniformValue("imageSize", QVector2D(width(), height()));
-            glareProgram_.setUniformValue("radianceToLuminance", radianceToLuminance(wlIndex));
+            const float wavenumber = 2e6*M_PI / wavelengths_[wlIndex];
+            constexpr float wavenumberBase = 2e6*M_PI/555;
 
-            glBlendFunc(GL_ONE, GL_ONE);
-            if(wlIndex==0)
-                glDisable(GL_BLEND);
-            else
-                glEnable(GL_BLEND);
-            glDepthMask(wlIndex+1 == wavelengths_.size()); // Only the last iteration updates the depth buffer
-            glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-            glDisable(GL_BLEND);
+            // Properly weigh according to the large-z asymptotics of the field
+            // \int F(k_x,k_y)*exp(i(k_x*x+k_y*y+z*\sqrt{|k|^2-k_x^2-k_y^2})) dk_x dk_y
+            //
+            // The field is proportional to k, but we use the ratio of k to that
+            // of the 555nm light to avoid having to alter exposure.
+            float colorScale = sqr(wavenumber / wavenumberBase);
+            colorScale /= sqr(sampleCount);
+
+            for(int sampleNumY=0; sampleNumY<sampleCount; ++sampleNumY)
+            {
+                for(int sampleNumX=0; sampleNumX<sampleCount; ++sampleNumX)
+                {
+                    glareProgram_.setUniformValue("targetWidth", float(1000*tools_->screenWidth()));
+                    glareProgram_.setUniformValue("pointCount", tools_->pointCount());
+                    glareProgram_.setUniformValue("arcPointCount", tools_->arcPointCount());
+                    glareProgram_.setUniformValue("curvatureRadius", float(tools_->curvatureRadius()));
+                    glareProgram_.setUniformValue("apertureRadius", float(tools_->apertureRadius()));
+                    glareProgram_.setUniformValue("sampleShift", sampleShift(sampleNumX, sampleNumY, sampleCount));
+                    glareProgram_.setUniformValue("wavenumber", wavenumber);
+                    glareProgram_.setUniformValue("globalRotationAngle", float(tools_->globalRotationAngle()));
+                    glareProgram_.setUniformValue("imageSize", QVector2D(width(), height()));
+                    glareProgram_.setUniformValue("radianceToLuminance", radianceToLuminance(wlIndex));
+                    glareProgram_.setUniformValue("colorScale", colorScale);
+
+                    glBlendFunc(GL_ONE, GL_ONE);
+                    if(wlIndex==0)
+                        glDisable(GL_BLEND);
+                    else
+                        glEnable(GL_BLEND);
+                    glDepthMask(wlIndex+1 == wavelengths_.size()); // Only the last iteration updates the depth buffer
+                    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+                    glDisable(GL_BLEND);
+                }
+            }
         }
         glDisable(GL_DEPTH_TEST);
         glDisable(GL_SCISSOR_TEST);
