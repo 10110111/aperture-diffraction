@@ -288,8 +288,18 @@ void Canvas::paintGL()
         glEnable(GL_SCISSOR_TEST);
 
         glEnable(GL_DEPTH_TEST);
+        glBlendFunc(GL_ONE, GL_ONE);
         glareProgram_.bind();
         const int sampleCount = tools_->sampleCount();
+
+        glareProgram_.setUniformValue("imageSize", QVector2D(width(), height()));
+        glareProgram_.setUniformValue("targetWidth", float(1000*tools_->screenWidth()));
+        glareProgram_.setUniformValue("pointCount", tools_->pointCount());
+        glareProgram_.setUniformValue("arcPointCount", tools_->arcPointCount());
+        glareProgram_.setUniformValue("curvatureRadius", float(tools_->curvatureRadius()));
+        glareProgram_.setUniformValue("apertureRadius", float(tools_->apertureRadius()));
+        glareProgram_.setUniformValue("globalRotationAngle", float(tools_->globalRotationAngle()));
+
         for(unsigned wlIndex=0; wlIndex<wavelengths_.size(); ++wlIndex)
         {
             const float wavenumber = 2e6*M_PI / wavelengths_[wlIndex];
@@ -303,23 +313,16 @@ void Canvas::paintGL()
             float colorScale = sqr(wavenumber / wavenumberBase);
             colorScale /= sqr(sampleCount);
 
+            glareProgram_.setUniformValue("wavenumber", wavenumber);
+            glareProgram_.setUniformValue("colorScale", colorScale);
+            glareProgram_.setUniformValue("radianceToLuminance", radianceToLuminance(wlIndex));
+
             for(int sampleNumY=0; sampleNumY<sampleCount; ++sampleNumY)
             {
                 for(int sampleNumX=0; sampleNumX<sampleCount; ++sampleNumX)
                 {
-                    glareProgram_.setUniformValue("targetWidth", float(1000*tools_->screenWidth()));
-                    glareProgram_.setUniformValue("pointCount", tools_->pointCount());
-                    glareProgram_.setUniformValue("arcPointCount", tools_->arcPointCount());
-                    glareProgram_.setUniformValue("curvatureRadius", float(tools_->curvatureRadius()));
-                    glareProgram_.setUniformValue("apertureRadius", float(tools_->apertureRadius()));
                     glareProgram_.setUniformValue("sampleShift", sampleShift(sampleNumX, sampleNumY, sampleCount));
-                    glareProgram_.setUniformValue("wavenumber", wavenumber);
-                    glareProgram_.setUniformValue("globalRotationAngle", float(tools_->globalRotationAngle()));
-                    glareProgram_.setUniformValue("imageSize", QVector2D(width(), height()));
-                    glareProgram_.setUniformValue("radianceToLuminance", radianceToLuminance(wlIndex));
-                    glareProgram_.setUniformValue("colorScale", colorScale);
 
-                    glBlendFunc(GL_ONE, GL_ONE);
                     if(wlIndex==0 && sampleNumX==0 && sampleNumY==0)
                         glDisable(GL_BLEND);
                     else
@@ -328,10 +331,10 @@ void Canvas::paintGL()
                     // Only the last iteration updates the depth buffer
                     glDepthMask(wlIndex+1 == wavelengths_.size() && sampleNumY+1 == sampleCount && sampleNumX+1 == sampleCount);
                     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-                    glDisable(GL_BLEND);
                 }
             }
         }
+        glDisable(GL_BLEND);
         glDisable(GL_DEPTH_TEST);
         glDisable(GL_SCISSOR_TEST);
         glScissor(0, 0, width(), height());
